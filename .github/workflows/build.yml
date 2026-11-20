@@ -44,6 +44,13 @@ jobs:
           mkdir -p build551/deps build551/appclasses build551/dex
           curl -sL -o build551/deps/json.jar https://repo1.maven.org/maven2/org/json/json/20231013/json-20231013.jar
           ANDROID_JAR=$(ls -1 "$ANDROID_HOME"/platforms/android-*/android.jar | sort -V | tail -n 1)
+          
+          # VERIFICACIÓN CRÍTICA: Asegurarse de que ImparaExtras existe antes de compilar
+          if [ ! -f "build551/src/com/germansilva/italianomaestro/ImparaExtras.java" ]; then
+            echo "ERROR: ImparaExtras.java no encontrado. Abortando para evitar APK roto."
+            exit 1
+          fi
+
           find build551/src build551/supportsrc build551/stubs -name "*.java" > build551/java-sources.txt
           javac -nowarn -cp "build551/deps/json.jar:$ANDROID_JAR:build551/deps-extra/sherpa-api.jar" -d build551/appclasses @build551/java-sources.txt
 
