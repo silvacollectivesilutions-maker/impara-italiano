@@ -4,136 +4,295 @@ import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
+import android.text.TextUtils;
+import android.util.TypedValue;
 import android.view.*;
 import android.widget.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import org.json.*;
 
+/** Burbujas del chat con iconos limpios estilo IA premium, pistas compactas y menú oscuro integrado. */
 public final class ChatBubbles {
  private static final int INK = 0xffffffff;
  private static final String HIST_KEY = "impara_chat_history_v1";
 
  static void detach(View v) {
-  if (v != null && v.getParent() instanceof ViewGroup) ((ViewGroup) v.getParent()).removeView(v);
+  if (v != null && v.getParent() instanceof ViewGroup) {
+   ((ViewGroup) v.getParent()).removeView(v);
+  }
  }
 
  static ArrayList<View> children(ViewGroup g) {
   ArrayList<View> r = new ArrayList<>();
-  for (int i = 0; i < g.getChildCount(); i++) r.add(g.getChildAt(i));
+  for (int i = 0; i < g.getChildCount(); i++) {
+   r.add(g.getChildAt(i));
+  }
   return r;
  }
 
  static void buttons(View v, View table, List<Button> out) {
   if (v == table) return;
-  if (v instanceof Button) out.add((Button) v);
-  else if (v instanceof ViewGroup) for (View c : children((ViewGroup) v)) buttons(c, table, out);
+  if (v instanceof Button) {
+   out.add((Button) v);
+  } else if (v instanceof ViewGroup) {
+   for (View c : children((ViewGroup) v)) {
+    buttons(c, table, out);
+   }
+  }
+ }
+
+ /** Estiliza un botón de acción con diseño limpio, fino y minimalista sin cajas gruesas. */
+ private static void styleMinimalAction(MainActivity a, Button b, String cleanLabel, int widthDp) {
+  try {
+   if (b == null) return;
+   b.setAllCaps(false);
+   b.setSingleLine(true);
+   b.setMaxLines(1);
+   b.setEllipsize(TextUtils.TruncateAt.END);
+   b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
+   b.setTextColor(0xFFE2ECF8);
+   b.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+   b.setMinWidth(0);
+   b.setMinimumWidth(0);
+   b.setMinHeight(0);
+   b.setMinimumHeight(0);
+   b.setPadding(a.dp(7), a.dp(3), a.dp(7), a.dp(3));
+   b.setGravity(Gravity.CENTER);
+
+   if (cleanLabel != null && !cleanLabel.isEmpty()) {
+    b.setText(cleanLabel);
+   }
+
+   GradientDrawable bg = new GradientDrawable();
+   bg.setShape(GradientDrawable.RECTANGLE);
+   bg.setColor(0x18FFFFFF);
+   bg.setCornerRadius(a.dp(999));
+   bg.setStroke(Math.max(1, a.dp(1)), 0x26FFFFFF);
+   b.setBackground(bg);
+
+   // Reducir tamaño de drawables internos si el botón trae icono nativo
+   android.graphics.drawable.Drawable[] drawables = b.getCompoundDrawables();
+   int sz = a.dp(14);
+   for (int i = 0; i < drawables.length; i++) {
+    if (drawables[i] != null) {
+     drawables[i].mutate();
+     drawables[i].setBounds(0, 0, sz, sz);
+     drawables[i].setTint(0xFFE2ECF8);
+    }
+   }
+   b.setCompoundDrawables(drawables[0], drawables[1], drawables[2], drawables[3]);
+   b.setCompoundDrawablePadding(a.dp(4));
+
+   if (widthDp > 0) {
+    ViewGroup.LayoutParams lp = b.getLayoutParams();
+    if (lp != null) {
+     lp.width = a.dp(widthDp);
+     lp.height = a.dp(28);
+     b.setLayoutParams(lp);
+    }
+   }
+  } catch (Throwable ignored) {}
+ }
+
+ /** Compacta y ordena las tarjetas de "Pistas" para que se vean finas y bien alineadas. */
+ private static void compactHints(MainActivity a, ViewGroup root) {
+  try {
+   if (root == null) return;
+   for (int i = 0; i < root.getChildCount(); i++) {
+    View child = root.getChildAt(i);
+    if (child instanceof ViewGroup) {
+     ViewGroup vg = (ViewGroup) child;
+     // Detectar filas horizontales de pistas (suelen contener varios botones o tarjetas)
+     if (vg instanceof LinearLayout && ((LinearLayout) vg).getOrientation() == LinearLayout.HORIZONTAL) {
+      int btnCount = 0;
+      for (int j = 0; j < vg.getChildCount(); j++) {
+       if (vg.getChildAt(j) instanceof Button || vg.getChildAt(j) instanceof TextView) {
+        btnCount++;
+       }
+      }
+      if (btnCount >= 2) {
+       vg.setPadding(a.dp(4), a.dp(2), a.dp(4), a.dp(2));
+       for (int j = 0; j < vg.getChildCount(); j++) {
+        View item = vg.getChildAt(j);
+        ViewGroup.LayoutParams itemLp = item.getLayoutParams();
+        if (itemLp instanceof ViewGroup.MarginLayoutParams) {
+         ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) itemLp;
+         mlp.setMargins(a.dp(4), a.dp(2), a.dp(4), a.dp(2));
+         if (mlp.height > a.dp(54) || mlp.height == ViewGroup.LayoutParams.MATCH_PARENT) {
+          mlp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+         }
+         item.setLayoutParams(mlp);
+        }
+        item.setMinimumHeight(0);
+        item.setPadding(a.dp(10), a.dp(6), a.dp(10), a.dp(6));
+        if (item instanceof TextView) {
+         TextView tv = (TextView) item;
+         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+         tv.setLineSpacing(a.dp(1.5f), 1f);
+         GradientDrawable pill = new GradientDrawable();
+         pill.setShape(GradientDrawable.RECTANGLE);
+         pill.setColor(0xFF15263D);
+         pill.setCornerRadius(a.dp(12));
+         pill.setStroke(Math.max(1, a.dp(1)), 0x337CC4FF);
+         tv.setBackground(pill);
+        }
+       }
+      }
+     }
+     compactHints(a, vg);
+    }
+   }
+  } catch (Throwable ignored) {}
  }
 
  public static TextView create(MainActivity a, String value, boolean user) {
   if (user) {
-   MoreCards546.user(a, value);
-   ImparaSuperApp.recordActivity(a, 5);
+   try {
+    MoreCards546.user(a, value);
+    ImparaSuperApp.recordActivity(a, 5);
+   } catch (Throwable ignored) {}
   }
+
   TextView text = a.legacyMessage(value, user);
   if (a.page != 1 || a.chat == null) return text;
 
-  View old = text;
-  while (old.getParent() instanceof View && old.getParent() != a.chat) old = (View) old.getParent();
-  if (old.getParent() != a.chat || !(old instanceof ViewGroup)) return text;
+  try {
+   View old = text;
+   while (old.getParent() instanceof View && old.getParent() != a.chat) {
+    old = (View) old.getParent();
+   }
+   if (old.getParent() != a.chat || !(old instanceof ViewGroup)) return text;
 
-  int index = a.chat.indexOfChild(old);
-  View table = old.findViewWithTag("study-columns");
-  ArrayList<Button> all = new ArrayList<>();
-  buttons(old, table, all);
+   int index = a.chat.indexOfChild(old);
+   View table = old.findViewWithTag("study-columns");
+   ArrayList<Button> all = new ArrayList<>();
+   buttons(old, table, all);
 
-  Button audio = null, translate = null, explain = null, columns = null, spanishAudio = null;
-  for (Button b : all) {
-   String d = String.valueOf(b.getContentDescription()), label = b.getText().toString();
-   if (d.contains("columnas")) columns = b;
-   else if (d.contains("traducción")) translate = b;
-   else if (d.contains("español") && d.contains("Escuchar")) spanishAudio = b;
-   else if (b.getTag() == text || d.contains("Paola") || d.contains("Escuchar o detener")) audio = b;
-   else if (label.contains("Explicar") || label.contains("significado") || label.contains("Rayos X")) explain = b;
-  }
+   Button audio = null, translate = null, explain = null, columns = null, spanishAudio = null;
+   for (Button b : all) {
+    String d = String.valueOf(b.getContentDescription());
+    String label = b.getText().toString();
+    if (d.contains("columnas")) columns = b;
+    else if (d.contains("traducción")) translate = b;
+    else if (d.contains("español") && d.contains("Escuchar")) spanishAudio = b;
+    else if (b.getTag() == text || d.contains("Paola") || d.contains("Escuchar o detener")) audio = b;
+    else if (label.contains("Explicar") || label.contains("significado") || label.contains("Rayos X")) explain = b;
+   }
 
-  ArrayList<TextView> translations = new ArrayList<>();
-  for (View v : children((ViewGroup) old)) {
-   if (v instanceof TextView && !(v instanceof Button) && v != text) translations.add((TextView) v);
-  }
+   ArrayList<TextView> translations = new ArrayList<>();
+   for (View v : children((ViewGroup) old)) {
+    if (v instanceof TextView && !(v instanceof Button) && v != text) {
+     translations.add((TextView) v);
+    }
+   }
 
-  LinearLayout bubble = new LinearLayout(a);
-  bubble.setOrientation(LinearLayout.VERTICAL);
-  bubble.setPadding(a.dp(11), a.dp(9), a.dp(11), a.dp(4));
-  bubble.setBackground(new WallStyle.Bubble(a, user));
-  bubble.setTag(0x7e002602, user);
-  bubble.setOnLongClickListener(v -> {
-   showMessageMenu(a, bubble, text, user);
-   return true;
-  });
+   LinearLayout bubble = new LinearLayout(a);
+   bubble.setOrientation(LinearLayout.VERTICAL);
+   bubble.setPadding(a.dp(11), a.dp(9), a.dp(11), a.dp(5));
+   bubble.setBackground(new WallStyle.Bubble(a, user));
+   bubble.setTag(0x7e002602, user);
+   bubble.setOnLongClickListener(v -> {
+    showMessageMenu(a, bubble, text, user);
+    return true;
+   });
 
-  LinearLayout body = new LinearLayout(a);
-  body.setOrientation(LinearLayout.VERTICAL);
-  detach(text);
-  text.setTag(0x7e002601, true);
-  text.setTextColor(a.prefs.getInt("chat_text_color", INK));
-  text.setTextSize(a.prefs.getInt("chat_text_size", 16));
-  text.setIncludeFontPadding(false);
-  text.setPadding(0, 0, 0, 0);
-  text.setLineSpacing(a.dp(3), 1);
-  body.addView(text, new LinearLayout.LayoutParams(-1, -2));
-  bubble.addView(body, new LinearLayout.LayoutParams(-1, -2));
+   LinearLayout body = new LinearLayout(a);
+   body.setOrientation(LinearLayout.VERTICAL);
+   detach(text);
+   text.setTag(0x7e002601, true);
+   text.setTextColor(a.prefs.getInt("chat_text_color", INK));
+   text.setTextSize(TypedValue.COMPLEX_UNIT_SP, a.prefs.getInt("chat_text_size", 16));
+   text.setIncludeFontPadding(false);
+   text.setPadding(0, 0, 0, 0);
+   text.setLineSpacing(a.dp(3), 1f);
+   body.addView(text, new LinearLayout.LayoutParams(-1, -2));
+   bubble.addView(body, new LinearLayout.LayoutParams(-1, -2));
 
-  for (TextView t : translations) {
-   detach(t);
-   t.setTag(0x7e002601, true);
-   t.setTextColor(a.prefs.getInt("chat_text_color", INK));
-   t.setPadding(a.dp(7), a.dp(7), a.dp(7), a.dp(7));
-   SofiaGlass.surface(a, t, 10, false, 0, false);
-   bubble.addView(t, new LinearLayout.LayoutParams(-1, -2));
-  }
+   for (TextView t : translations) {
+    detach(t);
+    t.setTag(0x7e002601, true);
+    t.setTextColor(a.prefs.getInt("chat_text_color", INK));
+    t.setPadding(a.dp(7), a.dp(6), a.dp(7), a.dp(6));
+    SofiaGlass.surface(a, t, 10, false, 0, false);
+    bubble.addView(t, new LinearLayout.LayoutParams(-1, -2));
+   }
 
-  if (spanishAudio != null) {
-   detach(spanishAudio);
-   CompactSofia.fit(a, spanishAudio, null, 0);
-   bubble.addView(spanishAudio, new LinearLayout.LayoutParams(-2, a.dp(36)));
-  }
-  if (table != null) {
-   detach(table);
-   bubble.addView(table, new LinearLayout.LayoutParams(-1, -2));
-  }
+   if (spanishAudio != null) {
+    detach(spanishAudio);
+    styleMinimalAction(a, spanishAudio, "ES", 0);
+    LinearLayout.LayoutParams spLp = new LinearLayout.LayoutParams(-2, a.dp(28));
+    spLp.topMargin = a.dp(4);
+    bubble.addView(spanishAudio, spLp);
+   }
 
-  LinearLayout actions = new LinearLayout(a);
-  actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-  if (audio != null) ActionStrip543.add(a, actions, audio, "Oír", 46);
-  if (translate != null) ActionStrip543.add(a, actions, translate, "Traducir", 64);
-  if (explain != null) ActionStrip543.add(a, actions, explain, "Explicar", 62);
-  if (columns != null) ActionStrip543.add(a, actions, columns, "Columnas", 68);
+   if (table != null) {
+    detach(table);
+    bubble.addView(table, new LinearLayout.LayoutParams(-1, -2));
+   }
 
-  Button shareButton = DeskUI.button(a, "Compartir", () -> ShareHub549.reply(a, text), false);
-  ActionStrip543.add(a, actions, shareButton, "Compartir", 36);
+   // Barra inferior minimalista estilo IA premium (sin bordes pesados)
+   LinearLayout actions = new LinearLayout(a);
+   actions.setOrientation(LinearLayout.HORIZONTAL);
+   actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+   actions.setPadding(0, a.dp(5), 0, a.dp(1));
 
-  Button saveButton = DeskUI.button(a, "Guardar", () -> Repaso546.save(a, text.getText().toString(), ""), false);
-  ActionStrip543.add(a, actions, saveButton, "Guardar", 36);
+   if (audio != null) addMinimalChip(a, actions, audio, "Oír", 44);
+   if (translate != null) addMinimalChip(a, actions, translate, "Traducir", 62);
+   if (explain != null) addMinimalChip(a, actions, explain, "Explicar", 60);
+   if (columns != null) addMinimalChip(a, actions, columns, "Tabla", 50);
 
-  Button menuButton = DeskUI.button(a, "⋮", () -> showMessageMenu(a, bubble, text, user), false);
-  menuButton.setContentDescription("Opciones del mensaje");
-  ActionStrip543.add(a, actions, menuButton, "◉", 32);
+   Button shareButton = DeskUI.button(a, "Compartir", () -> ShareHub549.reply(a, text), false);
+   addMinimalChip(a, actions, shareButton, "↗", 32);
 
-  HorizontalScrollView strip = new HorizontalScrollView(a);
-  strip.setHorizontalScrollBarEnabled(false);
-  strip.setFillViewport(false);
-  strip.setClipToPadding(false);
-  strip.addView(actions, new ViewGroup.LayoutParams(-2, -2));
-  bubble.addView(strip, new LinearLayout.LayoutParams(-1, -2));
+   Button saveButton = DeskUI.button(a, "Guardar", () -> ImparaSuperApp.saveFlashcardDirect(a, text.getText().toString()), false);
+   addMinimalChip(a, actions, saveButton, "✦", 32);
 
-  a.chat.removeView(old);
-  LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-  lp.setMargins(user ? a.dp(20) : 0, a.dp(4), user ? 0 : a.dp(12), a.dp(4));
-  a.chat.addView(bubble, index, lp);
-  a.root.post(() -> ButtonStudio.apply(a));
-  StudyDesk.selection(a, text);
+   Button menuButton = DeskUI.button(a, "⋮", () -> showMessageMenu(a, bubble, text, user), false);
+   menuButton.setContentDescription("Opciones del mensaje");
+   addMinimalChip(a, actions, menuButton, "•••", 36);
+
+   HorizontalScrollView strip = new HorizontalScrollView(a);
+   strip.setHorizontalScrollBarEnabled(false);
+   strip.setFillViewport(false);
+   strip.setClipToPadding(false);
+   strip.addView(actions, new ViewGroup.LayoutParams(-2, -2));
+   bubble.addView(strip, new LinearLayout.LayoutParams(-1, -2));
+
+   a.chat.removeView(old);
+   LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+   lp.setMargins(user ? a.dp(24) : 0, a.dp(4), user ? 0 : a.dp(14), a.dp(4));
+   a.chat.addView(bubble, index, lp);
+
+   if (a.root != null) {
+    a.root.post(() -> {
+     try {
+      ButtonStudio.apply(a);
+      styleMinimalAction(a, audio, "Oír", 44);
+      styleMinimalAction(a, translate, "Traducir", 62);
+      styleMinimalAction(a, explain, "Explicar", 60);
+      styleMinimalAction(a, columns, "Tabla", 50);
+      if (a.root instanceof ViewGroup) {
+       compactHints(a, (ViewGroup) a.root);
+      }
+     } catch (Throwable ignored) {}
+    });
+   }
+   StudyDesk.selection(a, text);
+  } catch (Throwable ignored) {}
   return text;
+ }
+
+ private static void addMinimalChip(MainActivity a, LinearLayout row, Button b, String label, int widthDp) {
+  if (b == null) return;
+  detach(b);
+  styleMinimalAction(a, b, label, widthDp);
+  LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(a.dp(widthDp), a.dp(28));
+  lp.setMarginStart(a.dp(5));
+  row.addView(b, lp);
  }
 
  private static void showMessageMenu(MainActivity a, LinearLayout bubble, TextView text, boolean user) {
@@ -145,7 +304,9 @@ public final class ChatBubbles {
    "Opciones rápidas");
 
   final AlertDialog[] holder = new AlertDialog[1];
-  Runnable dismiss = () -> { if (holder[0] != null && holder[0].isShowing()) holder[0].dismiss(); };
+  Runnable dismiss = () -> {
+   if (holder[0] != null && holder[0].isShowing()) holder[0].dismiss();
+  };
 
   LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
   gap.setMargins(0, 0, 0, a.dp(7));
@@ -183,7 +344,9 @@ public final class ChatBubbles {
   root.addView(ImparaSuperApp.buildOptionRow(a, "🗑️", "Borrar mensaje",
    "Quitar esta burbuja del chat", () -> {
     dismiss.run();
-    if (bubble.getParent() instanceof ViewGroup) ((ViewGroup) bubble.getParent()).removeView(bubble);
+    if (bubble.getParent() instanceof ViewGroup) {
+     ((ViewGroup) bubble.getParent()).removeView(bubble);
+    }
     a.toast("Mensaje borrado");
    }), gap);
 
@@ -223,14 +386,20 @@ public final class ChatBubbles {
   AlertDialog.Builder b = new AlertDialog.Builder(a)
    .setPositiveButton("Guardar", (d, w) -> {
     String val = et.getText().toString().trim();
-    if (!val.isEmpty()) { text.setText(val); a.toast("Mensaje editado"); }
+    if (!val.isEmpty()) {
+     text.setText(val);
+     a.toast("Mensaje editado");
+    }
    })
    .setNegativeButton("Cancelar", null);
 
   if (user) {
    b.setNeutralButton("Guardar y reenviar", (d, w) -> {
     String val = et.getText().toString().trim();
-    if (!val.isEmpty()) { text.setText(val); a.ask(val); }
+    if (!val.isEmpty()) {
+     text.setText(val);
+     a.ask(val);
+    }
    });
   }
   ImparaSuperApp.styleDialogWindow(a, b.create(), box);
@@ -243,7 +412,9 @@ public final class ChatBubbles {
    LinearLayout root = ImparaSuperApp.dialogHeader(a, "HISTORIAL OFFLINE", "Conversaciones guardadas");
 
    final AlertDialog[] holder = new AlertDialog[1];
-   Runnable dismiss = () -> { if (holder[0] != null && holder[0].isShowing()) holder[0].dismiss(); };
+   Runnable dismiss = () -> {
+    if (holder[0] != null && holder[0].isShowing()) holder[0].dismiss();
+   };
 
    LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
    gap.setMargins(0, 0, 0, a.dp(7));
@@ -275,7 +446,10 @@ public final class ChatBubbles {
  }
 
  private static void saveCurrentChat(MainActivity a) {
-  if (a.chat == null || a.chat.getChildCount() == 0) { a.toast("No hay mensajes para guardar"); return; }
+  if (a.chat == null || a.chat.getChildCount() == 0) {
+   a.toast("No hay mensajes para guardar");
+   return;
+  }
   try {
    JSONArray msgs = new JSONArray();
    for (int i = 0; i < a.chat.getChildCount(); i++) {
@@ -291,7 +465,10 @@ public final class ChatBubbles {
      }
     }
    }
-   if (msgs.length() == 0) { a.toast("Chat vacío"); return; }
+   if (msgs.length() == 0) {
+    a.toast("Chat vacío");
+    return;
+   }
    JSONArray arr = new JSONArray(a.prefs.getString(HIST_KEY, "[]"));
    JSONObject session = new JSONObject();
    session.put("title", new SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(new Date()));
@@ -318,8 +495,8 @@ public final class ChatBubbles {
    LinearLayout box = ImparaSuperApp.dialogHeader(a, "SESIÓN GUARDADA", session.optString("title"));
    TextView body = new TextView(a);
    body.setText(sb.toString().trim());
-   body.setTextColor(0xFFE6EEF8);
-   body.setTextSize(14);
+   body.setTextColor(Color.parseColor("#E6EEF8"));
+   body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
    body.setLineSpacing(a.dp(3), 1f);
    box.addView(body);
    scroll.addView(box);
@@ -350,15 +527,17 @@ public final class ChatBubbles {
   for (int i = 0; i < g.getChildCount(); i++) {
    View c = g.getChildAt(i);
    if (c instanceof TextView && Boolean.TRUE.equals(c.getTag(0x7e002601))) return (TextView) c;
-   if (c instanceof ViewGroup) { TextView r = findMainText((ViewGroup) c); if (r != null) return r; }
+   if (c instanceof ViewGroup) {
+    TextView r = findMainText((ViewGroup) c);
+    if (r != null) return r;
+   }
   }
   return null;
  }
 
  static void add(MainActivity a, LinearLayout row, Button b, int width, String label, int icon) {
   detach(b);
-  CompactSofia.fit(a, b, label, width);
-  if (icon != 0) SofiaGlass.action(a, b, icon);
-  row.addView(b, new LinearLayout.LayoutParams(a.dp(width), a.dp(36)));
+  styleMinimalAction(a, b, label, width > 0 ? width : 44);
+  row.addView(b, new LinearLayout.LayoutParams(a.dp(width > 0 ? width : 44), a.dp(28)));
  }
 }
