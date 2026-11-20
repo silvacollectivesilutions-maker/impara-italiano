@@ -1,0 +1,55 @@
+name: Compilar Impara l'italiano
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Descomprimir codigo y aplicar mejoras
+        run: |
+          unzip -o parlora_551_ligero.zip
+          if [ -d "overrides" ]; then
+            cp -rv overrides/* build551/src/com/germansilva/italianomaestro/
+          fi
+
+      - name: Descargar APK base desde Releases
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download Base --pattern "*.apk" -D .
+          cp Parlora_5_51.apk Parlora_5_50.apk || true
+          ls -lh *.apk
+
+      - name: Preparar herramientas
+        run: |
+          mkdir -p build551/deps
+          curl -L -o build551/deps/ecj.jar https://repo1.maven.org/maven2/org/eclipse/jdt/ecj/3.38.0/ecj-3.38.0.jar
+          cp "$ANDROID_HOME/platforms/android-34/android.jar" build551/deps/android.jar || true
+
+      - name: Ejecutar compilacion
+        run: |
+          python3 build551/build.py
+
+      - name: Subir nuevo APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Impara-Italiano-APK
+          path: |
+            *.apk
+            build551/*.apk
