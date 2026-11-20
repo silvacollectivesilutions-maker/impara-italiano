@@ -1,586 +1,234 @@
 package com.germansilva.italianomaestro;
 
 import android.app.AlertDialog;
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import android.content.Context;
-import android.graphics.Color;
-import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
+import android.content.SharedPreferences;
 import android.text.TextUtils;
-import android.view.*;
 import android.widget.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import org.json.*;
 
-/** Builds the final bubble explicitly, retaining original callbacks + Styled Menu, Edit, Delete, Slow Audio, Roleplay & History. */
-public final class ChatBubbles {
- private static final int INK = 0xffffffff;
- private static final int BG_SURFACE = 0xFF101A2B;
- private static final int BG_CARD = 0xFF17243B;
- private static final int BG_BADGE = 0xFF1E3252;
- private static final int STROKE_SUBTLE = 0x33FFFFFF;
- private static final int ACCENT = 0xFF56B4FF;
- private static final int MUTED = 0xFF9FB2C8;
+/** Extra super-app tools for Impara l'italiano: corrector, flashcards, quick phrases, interpreter, XP & wardrobe. */
+public final class ImparaSuperApp {
+ private static final String CARDS_KEY = "impara_cards_v1";
+ private static final String XP_KEY = "impara_xp_v1";
+ private static final String STREAK_KEY = "impara_streak_v1";
+ private static final String LAST_DAY_KEY = "impara_last_day_v1";
+ private static final String OUTFIT_KEY = "impara_sofia_outfit_v1";
 
- private static final String HIST_KEY = "impara_chat_history_v1";
- private static final String ROLE_KEY = "impara_active_role_v1";
+ public static void openHub(MainActivity a, String selectedText) {
+  recordActivity(a, 5);
+  int xp = a.prefs.getInt(XP_KEY, 0);
+  int streak = a.prefs.getInt(STREAK_KEY, 1);
+  String outfit = a.prefs.getString(OUTFIT_KEY, "Profesora elegante / seductora");
 
- static void detach(View v) {
-  if (v != null && v.getParent() instanceof ViewGroup) {
-   ((ViewGroup) v.getParent()).removeView(v);
-  }
- }
-
- static ArrayList<View> children(ViewGroup g) {
-  ArrayList<View> r = new ArrayList<>();
-  for (int i = 0; i < g.getChildCount(); i++) {
-   r.add(g.getChildAt(i));
-  }
-  return r;
- }
-
- static void buttons(View v, View table, List<Button> out) {
-  if (v == table) return;
-  if (v instanceof Button) out.add((Button) v);
-  else if (v instanceof ViewGroup) {
-   for (View child : children((ViewGroup) v)) buttons(child, table, out);
-  }
- }
-
- public static TextView create(MainActivity a, String value, boolean user) {
-  if (user) MoreCards546.user(a, value);
-  TextView text = a.legacyMessage(value, user);
-  if (a.page != 1 || a.chat == null) return text;
-
-  View old = text;
-  while (old.getParent() instanceof View && old.getParent() != a.chat) {
-   old = (View) old.getParent();
-  }
-  if (old.getParent() != a.chat || !(old instanceof ViewGroup)) return text;
-
-  int index = a.chat.indexOfChild(old);
-  View table = old.findViewWithTag("study-columns");
-  ArrayList<Button> all = new ArrayList<>();
-  buttons(old, table, all);
-
-  Button audio = null, translate = null, explain = null, columns = null, spanishAudio = null;
-  for (Button b : all) {
-   String d = String.valueOf(b.getContentDescription()), label = b.getText().toString();
-   if (d.contains("columnas")) columns = b;
-   else if (d.contains("traducción")) translate = b;
-   else if (d.contains("español") && d.contains("Escuchar")) spanishAudio = b;
-   else if (b.getTag() == text || d.contains("Paola") || d.contains("Escuchar o detener")) audio = b;
-   else if (label.contains("Explicar") || label.contains("significado") || label.contains("Rayos X")) explain = b;
-  }
-
-  ArrayList<TextView> translations = new ArrayList<>();
-  for (View v : children((ViewGroup) old)) {
-   if (v instanceof TextView && !(v instanceof Button) && v != text) translations.add((TextView) v);
-  }
-
-  LinearLayout bubble = new LinearLayout(a);
-  bubble.setOrientation(LinearLayout.VERTICAL);
-  bubble.setPadding(a.dp(11), a.dp(9), a.dp(11), a.dp(4));
-  bubble.setBackground(new WallStyle.Bubble(a, user));
-  bubble.setTag(0x7e002602, user);
-  bubble.setOnLongClickListener(v -> {
-   showMessageMenu(a, bubble, text, user);
-   return true;
-  });
-
-  LinearLayout body = new LinearLayout(a);
-  body.setOrientation(LinearLayout.VERTICAL);
-  detach(text);
-  text.setTag(0x7e002601, true);
-  text.setTextColor(a.prefs.getInt("chat_text_color", INK));
-  text.setTextSize(a.prefs.getInt("chat_text_size", 16));
-  text.setIncludeFontPadding(false);
-  text.setPadding(0, 0, 0, 0);
-  text.setLineSpacing(a.dp(3), 1);
-  body.addView(text, new LinearLayout.LayoutParams(-1, -2));
-  bubble.addView(body, new LinearLayout.LayoutParams(-1, -2));
-
-  for (TextView t : translations) {
-   detach(t);
-   t.setTag(0x7e002601, true);
-   t.setTextColor(a.prefs.getInt("chat_text_color", INK));
-   t.setPadding(a.dp(7), a.dp(7), a.dp(7), a.dp(7));
-   SofiaGlass.surface(a, t, 10, false, 0, false);
-   bubble.addView(t, new LinearLayout.LayoutParams(-1, -2));
-  }
-
-  if (spanishAudio != null) {
-   detach(spanishAudio);
-   CompactSofia.fit(a, spanishAudio, null, 0);
-   bubble.addView(spanishAudio, new LinearLayout.LayoutParams(-2, a.dp(36)));
-  }
-  if (table != null) {
-   detach(table);
-   bubble.addView(table, new LinearLayout.LayoutParams(-1, -2));
-  }
-
-  LinearLayout actions = new LinearLayout(a);
-  actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-  if (audio != null) ActionStrip543.add(a, actions, audio, "Oír", 46);
-  if (translate != null) ActionStrip543.add(a, actions, translate, "Traducir", 64);
-  if (explain != null) ActionStrip543.add(a, actions, explain, "Explicar", 62);
-  if (columns != null) ActionStrip543.add(a, actions, columns, "Columnas", 68);
-
-  Button shareButton = DeskUI.button(a, "Compartir", () -> ShareHub549.reply(a, text), false);
-  ActionStrip543.add(a, actions, shareButton, "Compartir", 36);
-
-  Button saveButton = DeskUI.button(a, "Guardar", () -> Repaso546.save(a, text.getText().toString(), ""), false);
-  ActionStrip543.add(a, actions, saveButton, "Guardar", 36);
-
-  Button menuButton = DeskUI.button(a, "⋮", () -> showMessageMenu(a, bubble, text, user), false);
-  menuButton.setContentDescription("Opciones del mensaje");
-  ActionStrip543.add(a, actions, menuButton, "◉", 32);
-
-  HorizontalScrollView strip = new HorizontalScrollView(a);
-  strip.setHorizontalScrollBarEnabled(false);
-  strip.setFillViewport(false);
-  strip.setClipToPadding(false);
-  strip.addView(actions, new ViewGroup.LayoutParams(-2, -2));
-  bubble.addView(strip, new LinearLayout.LayoutParams(-1, -2));
-
-  a.chat.removeView(old);
-  LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-  lp.setMargins(user ? a.dp(20) : 0, a.dp(4), user ? 0 : a.dp(12), a.dp(4));
-  a.chat.addView(bubble, index, lp);
-  a.root.post(() -> ButtonStudio.apply(a));
-  StudyDesk.selection(a, text);
-  return text;
- }
-
- private static GradientDrawable roundBg(MainActivity a, int fill, int stroke, int radiusDp) {
-  GradientDrawable g = new GradientDrawable();
-  g.setShape(GradientDrawable.RECTANGLE);
-  g.setColor(fill);
-  g.setCornerRadius(a.dp(radiusDp));
-  if (stroke != 0) {
-   g.setStroke(Math.max(1, a.dp(1)), stroke);
-  }
-  return g;
- }
-
- private static View buildOptionRow(MainActivity a, String badgeText, String title, String subtitle, Runnable action) {
-  LinearLayout row = new LinearLayout(a);
-  row.setOrientation(LinearLayout.HORIZONTAL);
-  row.setGravity(Gravity.CENTER_VERTICAL);
-  row.setPadding(a.dp(10), a.dp(9), a.dp(10), a.dp(9));
-  row.setBackground(roundBg(a, BG_CARD, STROKE_SUBTLE, 14));
-  row.setClickable(true);
-  row.setFocusable(true);
-  row.setOnClickListener(v -> action.run());
-
-  TextView badge = new TextView(a);
-  badge.setText(badgeText);
-  badge.setTextSize(14);
-  badge.setGravity(Gravity.CENTER);
-  badge.setBackground(roundBg(a, BG_BADGE, 0x4456B4FF, 10));
-  LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(a.dp(34), a.dp(34));
-  bLp.setMarginEnd(a.dp(10));
-  row.addView(badge, bLp);
-
-  LinearLayout col = new LinearLayout(a);
-  col.setOrientation(LinearLayout.VERTICAL);
-
-  TextView tvTitle = new TextView(a);
-  tvTitle.setText(title);
-  tvTitle.setTextColor(INK);
-  tvTitle.setTextSize(14.5f);
-  tvTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-  col.addView(tvTitle);
-
-  if (!TextUtils.isEmpty(subtitle)) {
-   TextView tvSub = new TextView(a);
-   tvSub.setText(subtitle);
-   tvSub.setTextColor(MUTED);
-   tvSub.setTextSize(11.5f);
-   tvSub.setPadding(0, a.dp(1), 0, 0);
-   col.addView(tvSub);
-  }
-
-  row.addView(col, new LinearLayout.LayoutParams(0, -2, 1f));
-
-  TextView arrow = new TextView(a);
-  arrow.setText("›");
-  arrow.setTextColor(ACCENT);
-  arrow.setTextSize(18);
-  arrow.setPadding(a.dp(6), 0, a.dp(2), 0);
-  row.addView(arrow);
-
-  return row;
- }
-
- private static void styleDialogWindow(MainActivity a, AlertDialog dialog, View container) {
-  dialog.setView(container, a.dp(12), a.dp(10), a.dp(12), a.dp(10));
-  dialog.show();
-  if (dialog.getWindow() != null) {
-   dialog.getWindow().setBackgroundDrawable(roundBg(a, BG_SURFACE, STROKE_SUBTLE, 22));
-  }
-  Button neg = dialog.getButton(AlertDialog.BUTTON_NEGATIVE);
-  if (neg != null) {
-   neg.setTextColor(ACCENT);
-   neg.setAllCaps(false);
-  }
-  Button pos = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
-  if (pos != null) {
-   pos.setTextColor(INK);
-   pos.setAllCaps(false);
-  }
-  Button neu = dialog.getButton(AlertDialog.BUTTON_NEUTRAL);
-  if (neu != null) {
-   neu.setTextColor(MUTED);
-   neu.setAllCaps(false);
-  }
- }
-
- private static void showMessageMenu(MainActivity a, LinearLayout bubble, TextView text, boolean user) {
-  String activeRole = a.prefs.getString(ROLE_KEY, "Tutora general");
-
-  ScrollView scroll = new ScrollView(a);
-  scroll.setVerticalScrollBarEnabled(false);
-
-  LinearLayout root = new LinearLayout(a);
-  root.setOrientation(LinearLayout.VERTICAL);
-
-  TextView chip = new TextView(a);
-  chip.setText("IMPARA L'ITALIANO · " + (user ? "TU MENSAJE" : "SOFÍA"));
-  chip.setTextColor(ACCENT);
-  chip.setTextSize(11);
-  chip.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-  chip.setLetterSpacing(0.08f);
-  root.addView(chip);
-
-  TextView heading = new TextView(a);
-  heading.setText("Opciones rápidas");
-  heading.setTextColor(INK);
-  heading.setTextSize(18);
-  heading.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-  heading.setPadding(0, a.dp(2), 0, a.dp(8));
-  root.addView(heading);
-
-  final AlertDialog[] holder = new AlertDialog[1];
-  Runnable dismiss = () -> {
-   if (holder[0] != null && holder[0].isShowing()) holder[0].dismiss();
+  String[] menu = {
+   "✍️ Corregir y mejorar frase con Sofía",
+   "🃏 Cuaderno y repaso rápido (Flashcards)",
+   "⚡ Frases rápidas de 1 toque (ES / IT + Audio)",
+   "🌐 Modo intérprete rápido (ES ↔ IT)",
+   "🏆 Progreso, racha (" + streak + "d) y XP (" + xp + ")",
+   "👗 Estilo / Guardarropa de Sofía (" + outfit + ")"
   };
 
-  LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
-  gap.setMargins(0, 0, 0, a.dp(7));
-
-  root.addView(buildOptionRow(a, "✏️", "Editar mensaje",
-   user ? "Modificar o reenviar a Sofía" : "Ajustar texto en el chat", () -> {
-    dismiss.run();
-    editMessage(a, text, user);
-   }), gap);
-
-  root.addView(buildOptionRow(a, "🗑️", "Borrar mensaje",
-   "Quitar esta burbuja de la conversación", () -> {
-    dismiss.run();
-    if (bubble.getParent() instanceof ViewGroup) {
-     ((ViewGroup) bubble.getParent()).removeView(bubble);
-    }
-    a.toast("Mensaje borrado");
-   }), gap);
-
-  root.addView(buildOptionRow(a, "🐢", "Escuchar lento (0.75x)",
-   "Pronunciación pausada con Sofía", () -> {
-    dismiss.run();
-    a.speak(text.getText().toString(), 0, 0.75f);
-   }), gap);
-
-  root.addView(buildOptionRow(a, "📋", "Copiar texto",
-   "Copiar al portapapeles", () -> {
-    dismiss.run();
-    copyToClipboard(a, text.getText().toString());
-   }), gap);
-
-  root.addView(buildOptionRow(a, "🎭", "Escenario de práctica",
-   "Actual: " + activeRole, () -> {
-    dismiss.run();
-    showRoleplayDialog(a);
-   }), gap);
-
-  root.addView(buildOptionRow(a, "🗂️", "Historial de conversaciones",
-   "Guardar, abrir o limpiar sesiones", () -> {
-    dismiss.run();
-    showHistoryDialog(a);
-   }), gap);
-
-  root.addView(buildOptionRow(a, "🎨", "Cambiar color de burbuja",
-   "Personalizar paleta del chat", () -> {
-    dismiss.run();
-    ChatLook542.palette(a, user);
-   }), new LinearLayout.LayoutParams(-1, -2));
-
-  scroll.addView(root);
-
-  AlertDialog dialog = new AlertDialog.Builder(a)
-   .setNegativeButton("Cerrar", null)
-   .create();
-  holder[0] = dialog;
-  styleDialogWindow(a, dialog, scroll);
- }
-
- private static void copyToClipboard(MainActivity a, String content) {
-  ClipboardManager cm = (ClipboardManager) a.getSystemService(Context.CLIPBOARD_SERVICE);
-  if (cm != null) {
-   cm.setPrimaryClip(ClipData.newPlainText("Impara l'italiano", content));
-   a.toast("Texto copiado");
-  }
- }
-
- private static void showRoleplayDialog(MainActivity a) {
-  final String[] roles = {
-   "Tutora general",
-   "Bar y restaurante en Italia",
-   "Hotel y viaje",
-   "Conversación cotidiana",
-   "Práctica de pronunciación y corrección"
-  };
-  final String[] subs = {
-   "Charla guiada y apoyo paso a paso",
-   "Pedir comida, café y cuenta en italiano",
-   "Llegada, reservas y direcciones",
-   "Expresiones naturales del día a día",
-   "Frases cortas y corrección de errores"
-  };
-  final String[] prompts = {
-   "Ciao Sofia! Parliamo in italiano e aiutami a migliorare con calma.",
-   "Ciao Sofia! Facciamo finta di essere in un bar o ristorante in Italia. Tu sei la cameriera e io ordino.",
-   "Ciao Sofia! Simuliamo l'arrivo in hotel o in stazione in Italia. Aiutami con le frasi utili.",
-   "Ciao Sofia! Facciamo una chiacchierata naturale in italiano sulla vita di tutti i giorni.",
-   "Ciao Sofia! Voglio esercitarmi a parlare bene in italiano: dimmi una frase semplice e poi correggimi se sbaglio."
-  };
-
-  ScrollView scroll = new ScrollView(a);
-  LinearLayout root = new LinearLayout(a);
-  root.setOrientation(LinearLayout.VERTICAL);
-
-  TextView title = new TextView(a);
-  title.setText("Elegir escenario");
-  title.setTextColor(INK);
-  title.setTextSize(18);
-  title.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-  title.setPadding(0, 0, 0, a.dp(8));
-  root.addView(title);
-
-  final AlertDialog[] holder = new AlertDialog[1];
-  LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
-  gap.setMargins(0, 0, 0, a.dp(7));
-
-  for (int i = 0; i < roles.length; i++) {
-   final int idx = i;
-   root.addView(buildOptionRow(a, "🎭", roles[i], subs[i], () -> {
-    if (holder[0] != null && holder[0].isShowing()) holder[0].dismiss();
-    a.prefs.edit().putString(ROLE_KEY, roles[idx]).apply();
-    a.toast("Escenario: " + roles[idx]);
-    a.ask(prompts[idx]);
-   }), gap);
-  }
-
-  scroll.addView(root);
-  AlertDialog dialog = new AlertDialog.Builder(a)
-   .setNegativeButton("Cancelar", null)
-   .create();
-  holder[0] = dialog;
-  styleDialogWindow(a, dialog, scroll);
- }
-
- private static void editMessage(MainActivity a, TextView text, boolean user) {
-  LinearLayout box = new LinearLayout(a);
-  box.setOrientation(LinearLayout.VERTICAL);
-
-  TextView title = new TextView(a);
-  title.setText("Editar mensaje");
-  title.setTextColor(INK);
-  title.setTextSize(18);
-  title.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-  title.setPadding(0, 0, 0, a.dp(8));
-  box.addView(title);
-
-  EditText et = new EditText(a);
-  et.setText(text.getText().toString());
-  et.setSelection(et.getText().length());
-  et.setTextColor(INK);
-  et.setHintTextColor(MUTED);
-  et.setPadding(a.dp(12), a.dp(10), a.dp(12), a.dp(10));
-  et.setBackground(roundBg(a, BG_CARD, ACCENT, 12));
-  box.addView(et);
-
-  AlertDialog.Builder b = new AlertDialog.Builder(a)
-   .setView(box)
-   .setPositiveButton("Guardar", (d, w) -> {
-    String val = et.getText().toString().trim();
-    if (!val.isEmpty()) {
-     text.setText(val);
-     a.toast("Mensaje editado");
+  new AlertDialog.Builder(a)
+   .setTitle("Impara l'italiano · Súper App")
+   .setItems(menu, (d, which) -> {
+    switch (which) {
+     case 0:
+      correctPhrase(a, selectedText);
+      break;
+     case 1:
+      openFlashcards(a, selectedText);
+      break;
+     case 2:
+      openQuickPhrases(a);
+      break;
+     case 3:
+      openInterpreter(a, selectedText);
+      break;
+     case 4:
+      showStats(a);
+      break;
+     case 5:
+      chooseOutfit(a);
+      break;
+     default:
+      break;
     }
    })
-   .setNegativeButton("Cancelar", null);
+   .setNegativeButton("Cerrar", null)
+   .show();
+ }
 
-  if (user) {
-   b.setNeutralButton("Guardar y reenviar", (d, w) -> {
-    String val = et.getText().toString().trim();
-    if (!val.isEmpty()) {
-     text.setText(val);
-     a.ask(val);
+ public static void correctPhrase(MainActivity a, String initial) {
+  EditText input = new EditText(a);
+  input.setHint("Escribe o pega una frase en italiano...");
+  if (!TextUtils.isEmpty(initial)) {
+   input.setText(initial);
+   input.setSelection(input.getText().length());
+  }
+
+  new AlertDialog.Builder(a)
+   .setTitle("Corrector de italiano con Sofía")
+   .setView(input)
+   .setPositiveButton("Analizar y corregir", (d, w) -> {
+    String phrase = input.getText().toString().trim();
+    if (phrase.isEmpty()) {
+     a.toast("Escribe una frase primero");
+     return;
     }
-   });
-  }
-
-  AlertDialog dialog = b.create();
-  dialog.show();
-  if (dialog.getWindow() != null) {
-   dialog.getWindow().setBackgroundDrawable(roundBg(a, BG_SURFACE, STROKE_SUBTLE, 22));
-  }
+    recordActivity(a, 15);
+    String prompt = "Correggi questa frase in italiano, spiega brevemente eventuali errori grammaticali o preposizioni e proponi un'alternativa naturale:\n\"" + phrase + "\"";
+    a.ask(prompt);
+   })
+   .setNegativeButton("Cancelar", null)
+   .show();
  }
 
- private static void showHistoryDialog(MainActivity a) {
+ public static void openFlashcards(MainActivity a, String currentPhrase) {
   try {
-   JSONArray arr = new JSONArray(a.prefs.getString(HIST_KEY, "[]"));
-   ScrollView scroll = new ScrollView(a);
-   LinearLayout root = new LinearLayout(a);
-   root.setOrientation(LinearLayout.VERTICAL);
-
-   TextView title = new TextView(a);
-   title.setText("Historial de conversaciones");
-   title.setTextColor(INK);
-   title.setTextSize(18);
-   title.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
-   title.setPadding(0, 0, 0, a.dp(8));
-   root.addView(title);
-
-   final AlertDialog[] holder = new AlertDialog[1];
-   Runnable dismiss = () -> {
-    if (holder[0] != null && holder[0].isShowing()) holder[0].dismiss();
-   };
-
-   LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
-   gap.setMargins(0, 0, 0, a.dp(7));
-
-   root.addView(buildOptionRow(a, "➕", "Guardar conversación actual",
-    "Guarda los mensajes visibles en este dispositivo", () -> {
-     dismiss.run();
-     saveCurrentChat(a);
-    }), gap);
-
-   for (int i = arr.length() - 1; i >= 0; i--) {
-    final int idx = i;
-    JSONObject o = arr.getJSONObject(i);
-    int count = o.optJSONArray("msgs") != null ? o.optJSONArray("msgs").length() : 0;
-    root.addView(buildOptionRow(a, "💬", o.optString("title", "Sesión"),
-     count + " mensajes guardados", () -> {
-      dismiss.run();
-      openSavedChat(a, idx);
-     }), gap);
+   JSONArray cards = new JSONArray(a.prefs.getString(CARDS_KEY, "[]"));
+   ArrayList<String> items = new ArrayList<>();
+   items.add("➕ Guardar frase actual en tarjetas");
+   for (int i = cards.length() - 1; i >= 0; i--) {
+    JSONObject c = cards.getJSONObject(i);
+    items.add("🃏 " + c.optString("it", "") + " — " + c.optString("note", "Repaso"));
    }
 
-   scroll.addView(root);
-   AlertDialog dialog = new AlertDialog.Builder(a)
-    .setNegativeButton("Cerrar", null)
-    .create();
-   holder[0] = dialog;
-   styleDialogWindow(a, dialog, scroll);
-  } catch (Exception e) {
-   a.toast("Error abriendo historial");
-  }
- }
-
- private static void saveCurrentChat(MainActivity a) {
-  if (a.chat == null || a.chat.getChildCount() == 0) {
-   a.toast("No hay mensajes para guardar");
-   return;
-  }
-  try {
-   JSONArray msgs = new JSONArray();
-   for (int i = 0; i < a.chat.getChildCount(); i++) {
-    View v = a.chat.getChildAt(i);
-    Object uTag = v.getTag(0x7e002602);
-    if (uTag instanceof Boolean && v instanceof ViewGroup) {
-     TextView tv = findMainText((ViewGroup) v);
-     if (tv != null) {
-      JSONObject m = new JSONObject();
-      m.put("u", (Boolean) uTag);
-      m.put("t", tv.getText().toString());
-      msgs.put(m);
+   new AlertDialog.Builder(a)
+    .setTitle("Flashcards offline (" + cards.length() + ")")
+    .setItems(items.toArray(new String[0]), (d, which) -> {
+     if (which == 0) {
+      String base = !TextUtils.isEmpty(currentPhrase) ? currentPhrase : "Ciao! Come stai oggi?";
+      try {
+       JSONObject obj = new JSONObject();
+       obj.put("it", base);
+       obj.put("note", "Guardada en sesión");
+       cards.put(obj);
+       a.prefs.edit().putString(CARDS_KEY, cards.toString()).apply();
+       recordActivity(a, 10);
+       a.toast("Tarjeta guardada");
+      } catch (Exception ignored) {
+       a.toast("No se pudo guardar tarjeta");
+      }
+     } else {
+      int idx = cards.length() - which;
+      JSONObject c = cards.optJSONObject(idx);
+      if (c != null) {
+       String phrase = c.optString("it", "");
+       new AlertDialog.Builder(a)
+        .setTitle("Repasar tarjeta")
+        .setMessage("Italiano:\n" + phrase + "\n\nNota: " + c.optString("note", ""))
+        .setPositiveButton("Escuchar (Normal)", (d2, w2) -> a.speak(phrase, 0, 1.0f))
+        .setNeutralButton("Escuchar lento (0.75x)", (d2, w2) -> a.speak(phrase, 0, 0.75f))
+        .setNegativeButton("Cerrar", null)
+        .show();
+      }
      }
-    }
-   }
-   if (msgs.length() == 0) {
-    a.toast("Chat vacío");
-    return;
-   }
-   JSONArray arr = new JSONArray(a.prefs.getString(HIST_KEY, "[]"));
-   JSONObject session = new JSONObject();
-   String date = new SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(new Date());
-   session.put("title", date);
-   session.put("msgs", msgs);
-   arr.put(session);
-   a.prefs.edit().putString(HIST_KEY, arr.toString()).apply();
-   a.toast("Conversación guardada (" + msgs.length() + " mensajes)");
-  } catch (Exception e) {
-   a.toast("No se pudo guardar");
-  }
- }
-
- private static void openSavedChat(MainActivity a, int idx) {
-  try {
-   JSONArray arr = new JSONArray(a.prefs.getString(HIST_KEY, "[]"));
-   JSONObject session = arr.getJSONObject(idx);
-   JSONArray msgs = session.getJSONArray("msgs");
-   StringBuilder sb = new StringBuilder();
-   for (int i = 0; i < msgs.length(); i++) {
-    JSONObject m = msgs.getJSONObject(i);
-    sb.append(m.optBoolean("u") ? "Tú: " : "Sofía: ").append(m.optString("t")).append("\n\n");
-   }
-
-   AlertDialog dialog = new AlertDialog.Builder(a)
-    .setTitle("Sesión " + session.optString("title"))
-    .setMessage(sb.toString().trim())
-    .setPositiveButton("Cargar en el chat", (d, w) -> {
-     a.chat.removeAllViews();
-     for (int i = 0; i < msgs.length(); i++) {
-      JSONObject m = msgs.optJSONObject(i);
-      if (m != null) create(a, m.optString("t"), m.optBoolean("u"));
-     }
-     a.toast("Conversación cargada");
-    })
-    .setNeutralButton("Eliminar", (d, w) -> {
-     arr.remove(idx);
-     a.prefs.edit().putString(HIST_KEY, arr.toString()).apply();
-     a.toast("Sesión eliminada");
     })
     .setNegativeButton("Cerrar", null)
-    .create();
-   dialog.show();
-   if (dialog.getWindow() != null) {
-    dialog.getWindow().setBackgroundDrawable(roundBg(a, BG_SURFACE, STROKE_SUBTLE, 22));
-   }
+    .show();
   } catch (Exception e) {
-   a.toast("Error al cargar");
+   a.toast("Error abriendo flashcards");
   }
  }
 
- private static TextView findMainText(ViewGroup g) {
-  for (int i = 0; i < g.getChildCount(); i++) {
-   View c = g.getChildAt(i);
-   if (c instanceof TextView && Boolean.TRUE.equals(c.getTag(0x7e002601))) return (TextView) c;
-   if (c instanceof ViewGroup) {
-    TextView r = findMainText((ViewGroup) c);
-    if (r != null) return r;
-   }
-  }
-  return null;
+ public static void openQuickPhrases(MainActivity a) {
+  final String[] labels = {
+   "Buongiorno! Come stai? (Buenos días)",
+   "Quanto costa questo? (¿Cuánto cuesta esto?)",
+   "Non capisco, può ripetere più lentamente? (No entiendo, ¿puede repetir?)",
+   "Dov'è la stazione o il bagno? (¿Dónde está la estación o el baño?)",
+   "Grazie mille, sei gentilissima! (¡Muchas gracias, eres muy amable!)"
+  };
+  final String[] italian = {
+   "Buongiorno! Come stai?",
+   "Quanto costa questo?",
+   "Non capisco, può ripetere più lentamente?",
+   "Dov'è la stazione o il bagno?",
+   "Grazie mille, sei gentilissima!"
+  };
+
+  new AlertDialog.Builder(a)
+   .setTitle("Frases rápidas · 1 toque")
+   .setItems(labels, (d, which) -> {
+    recordActivity(a, 5);
+    String phrase = italian[which];
+    new AlertDialog.Builder(a)
+     .setTitle(phrase)
+     .setPositiveButton("Escuchar audio", (d2, w2) -> a.speak(phrase, 0, 1.0f))
+     .setNeutralButton("Enviar a Sofía", (d2, w2) -> a.ask(phrase))
+     .setNegativeButton("Cerrar", null)
+     .show();
+   })
+   .setNegativeButton("Cerrar", null)
+   .show();
  }
 
- static void add(MainActivity a, LinearLayout row, Button b, int width, String label, int icon) {
-  detach(b);
-  CompactSofia.fit(a, b, label, width);
-  if (icon != 0) SofiaGlass.action(a, b, icon);
-  row.addView(b, new LinearLayout.LayoutParams(a.dp(width), a.dp(36)));
+ public static void openInterpreter(MainActivity a, String initial) {
+  EditText box = new EditText(a);
+  box.setHint("Escribe en español o italiano para traducir y hablar...");
+  if (!TextUtils.isEmpty(initial)) box.setText(initial);
+
+  new AlertDialog.Builder(a)
+   .setTitle("Modo intérprete rápido")
+   .setView(box)
+   .setPositiveButton("Traducir al italiano", (d, w) -> {
+    String txt = box.getText().toString().trim();
+    if (!txt.isEmpty()) {
+     recordActivity(a, 10);
+     a.ask("Traduci in italiano naturale e chiarisci eventuali sfumature: " + txt);
+    }
+   })
+   .setNeutralButton("Leer en italiano", (d, w) -> {
+    String txt = box.getText().toString().trim();
+    if (!txt.isEmpty()) a.speak(txt, 0, 1.0f);
+   })
+   .setNegativeButton("Cerrar", null)
+   .show();
+ }
+
+ public static void showStats(MainActivity a) {
+  int xp = a.prefs.getInt(XP_KEY, 0);
+  int streak = a.prefs.getInt(STREAK_KEY, 1);
+  String level = xp >= 300 ? "Intermedio (B1)" : (xp >= 120 ? "Elemental (A2)" : "Principiante (A1)");
+  new AlertDialog.Builder(a)
+   .setTitle("Tu progreso · Impara l'italiano")
+   .setMessage("🔥 Racha activa: " + streak + " día(s)\n⭐ Experiencia total: " + xp + " XP\n📈 Nivel estimado: " + level)
+   .setPositiveButton("¡A practicar!", (d, w) -> a.ask("Ciao Sofia! Facciamo un breve esercizio di italiano per il mio livello " + level + "."))
+   .setNegativeButton("Cerrar", null)
+   .show();
+ }
+
+ public static void chooseOutfit(MainActivity a) {
+  final String[] outfits = {
+   "Profesora elegante / seductora",
+   "Clase clásica en aula",
+   "Salida casual en Italia",
+   "Modo noche / gala"
+  };
+  new AlertDialog.Builder(a)
+   .setTitle("Estilo y guardarropa de Sofía")
+   .setItems(outfits, (d, which) -> {
+    a.prefs.edit().putString(OUTFIT_KEY, outfits[which]).apply();
+    a.toast("Estilo guardado: " + outfits[which]);
+   })
+   .setNegativeButton("Cerrar", null)
+   .show();
+ }
+
+ public static void recordActivity(MainActivity a, int gainedXp) {
+  if (a == null || a.prefs == null) return;
+  SharedPreferences prefs = a.prefs;
+  String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+  String lastDay = prefs.getString(LAST_DAY_KEY, "");
+  int streak = prefs.getInt(STREAK_KEY, 1);
+  if (!today.equals(lastDay)) {
+   streak = lastDay.isEmpty() ? 1 : streak + 1;
+   prefs.edit().putString(LAST_DAY_KEY, today).putInt(STREAK_KEY, streak).apply();
+  }
+  int currentXp = prefs.getInt(XP_KEY, 0);
+  prefs.edit().putInt(XP_KEY, currentXp + Math.max(0, gainedXp)).apply();
  }
 }
