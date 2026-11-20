@@ -137,6 +137,7 @@ public final class ChatBubbles {
  }
 
  private static void showMessageMenu(MainActivity a, LinearLayout bubble, TextView text, boolean user) {
+  String msg = text.getText().toString();
   ScrollView scroll = new ScrollView(a);
   scroll.setVerticalScrollBarEnabled(false);
   LinearLayout root = ImparaSuperApp.dialogHeader(a,
@@ -150,9 +151,27 @@ public final class ChatBubbles {
   gap.setMargins(0, 0, 0, a.dp(7));
 
   root.addView(ImparaSuperApp.buildOptionRow(a, "⚡", "Centro Súper App",
-   "Corrector, flashcards, juegos, jerga, intérprete y Sofía", () -> {
+   "50 verbos, falsos amigos, reto diario, nivel, temas y respaldo", () -> {
     dismiss.run();
-    ImparaSuperApp.openHub(a, text.getText().toString());
+    ImparaSuperApp.openHub(a, msg);
+   }), gap);
+
+  root.addView(ImparaSuperApp.buildOptionRow(a, "🃏", "Guardar directo en Flashcards",
+   "Añade este mensaje a tu mazo con 1 toque (+10 XP)", () -> {
+    dismiss.run();
+    ImparaSuperApp.saveFlashcardDirect(a, msg);
+   }), gap);
+
+  root.addView(ImparaSuperApp.buildOptionRow(a, "🎧", "Practicar Shadowing",
+   "Sofía lo dice normal (1.0x), pausa y lento (0.75x)", () -> {
+    dismiss.run();
+    ImparaExtras.startShadowingCycle(a, msg);
+   }), gap);
+
+  root.addView(ImparaSuperApp.buildOptionRow(a, "🐢", "Escuchar lento (0.75x)",
+   "Repetir pronunciación despacio", () -> {
+    dismiss.run();
+    a.speak(msg, 0, 0.75f);
    }), gap);
 
   root.addView(ImparaSuperApp.buildOptionRow(a, "✏️", "Editar mensaje",
@@ -168,18 +187,12 @@ public final class ChatBubbles {
     a.toast("Mensaje borrado");
    }), gap);
 
-  root.addView(ImparaSuperApp.buildOptionRow(a, "🐢", "Escuchar lento (0.75x)",
-   "Repetir pronunciación despacio", () -> {
-    dismiss.run();
-    a.speak(text.getText().toString(), 0, 0.75f);
-   }), gap);
-
   root.addView(ImparaSuperApp.buildOptionRow(a, "📋", "Copiar texto",
    "Guardar en el portapapeles", () -> {
     dismiss.run();
     ClipboardManager cm = (ClipboardManager) a.getSystemService(Context.CLIPBOARD_SERVICE);
     if (cm != null) {
-     cm.setPrimaryClip(ClipData.newPlainText("Impara l'italiano", text.getText().toString()));
+     cm.setPrimaryClip(ClipData.newPlainText("Impara l'italiano", msg));
      a.toast("Texto copiado");
     }
    }), gap);
