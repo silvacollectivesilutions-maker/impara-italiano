@@ -1,234 +1,86 @@
-package com.germansilva.italianomaestro;
-
-import android.app.AlertDialog;
-import android.content.SharedPreferences;
-import android.text.TextUtils;
-import android.widget.*;
-import java.text.SimpleDateFormat;
-import java.util.*;
-import org.json.*;
-
-/** Extra super-app tools for Impara l'italiano: corrector, flashcards, quick phrases, interpreter, XP & wardrobe. */
-public final class ImparaSuperApp {
- private static final String CARDS_KEY = "impara_cards_v1";
- private static final String XP_KEY = "impara_xp_v1";
- private static final String STREAK_KEY = "impara_streak_v1";
- private static final String LAST_DAY_KEY = "impara_last_day_v1";
- private static final String OUTFIT_KEY = "impara_sofia_outfit_v1";
-
- public static void openHub(MainActivity a, String selectedText) {
-  recordActivity(a, 5);
-  int xp = a.prefs.getInt(XP_KEY, 0);
-  int streak = a.prefs.getInt(STREAK_KEY, 1);
-  String outfit = a.prefs.getString(OUTFIT_KEY, "Profesora elegante / seductora");
-
-  String[] menu = {
-   "✍️ Corregir y mejorar frase con Sofía",
-   "🃏 Cuaderno y repaso rápido (Flashcards)",
-   "⚡ Frases rápidas de 1 toque (ES / IT + Audio)",
-   "🌐 Modo intérprete rápido (ES ↔ IT)",
-   "🏆 Progreso, racha (" + streak + "d) y XP (" + xp + ")",
-   "👗 Estilo / Guardarropa de Sofía (" + outfit + ")"
-  };
-
-  new AlertDialog.Builder(a)
-   .setTitle("Impara l'italiano · Súper App")
-   .setItems(menu, (d, which) -> {
-    switch (which) {
-     case 0:
-      correctPhrase(a, selectedText);
-      break;
-     case 1:
-      openFlashcards(a, selectedText);
-      break;
-     case 2:
-      openQuickPhrases(a);
-      break;
-     case 3:
-      openInterpreter(a, selectedText);
-      break;
-     case 4:
-      showStats(a);
-      break;
-     case 5:
-      chooseOutfit(a);
-      break;
-     default:
-      break;
-    }
-   })
-   .setNegativeButton("Cerrar", null)
-   .show();
- }
-
- public static void correctPhrase(MainActivity a, String initial) {
-  EditText input = new EditText(a);
-  input.setHint("Escribe o pega una frase en italiano...");
-  if (!TextUtils.isEmpty(initial)) {
-   input.setText(initial);
-   input.setSelection(input.getText().length());
-  }
-
-  new AlertDialog.Builder(a)
-   .setTitle("Corrector de italiano con Sofía")
-   .setView(input)
-   .setPositiveButton("Analizar y corregir", (d, w) -> {
-    String phrase = input.getText().toString().trim();
-    if (phrase.isEmpty()) {
-     a.toast("Escribe una frase primero");
-     return;
-    }
-    recordActivity(a, 15);
-    String prompt = "Correggi questa frase in italiano, spiega brevemente eventuali errori grammaticali o preposizioni e proponi un'alternativa naturale:\n\"" + phrase + "\"";
-    a.ask(prompt);
-   })
-   .setNegativeButton("Cancelar", null)
-   .show();
- }
-
- public static void openFlashcards(MainActivity a, String currentPhrase) {
-  try {
-   JSONArray cards = new JSONArray(a.prefs.getString(CARDS_KEY, "[]"));
-   ArrayList<String> items = new ArrayList<>();
-   items.add("➕ Guardar frase actual en tarjetas");
-   for (int i = cards.length() - 1; i >= 0; i--) {
-    JSONObject c = cards.getJSONObject(i);
-    items.add("🃏 " + c.optString("it", "") + " — " + c.optString("note", "Repaso"));
-   }
-
-   new AlertDialog.Builder(a)
-    .setTitle("Flashcards offline (" + cards.length() + ")")
-    .setItems(items.toArray(new String[0]), (d, which) -> {
-     if (which == 0) {
-      String base = !TextUtils.isEmpty(currentPhrase) ? currentPhrase : "Ciao! Come stai oggi?";
-      try {
-       JSONObject obj = new JSONObject();
-       obj.put("it", base);
-       obj.put("note", "Guardada en sesión");
-       cards.put(obj);
-       a.prefs.edit().putString(CARDS_KEY, cards.toString()).apply();
-       recordActivity(a, 10);
-       a.toast("Tarjeta guardada");
-      } catch (Exception ignored) {
-       a.toast("No se pudo guardar tarjeta");
-      }
-     } else {
-      int idx = cards.length() - which;
-      JSONObject c = cards.optJSONObject(idx);
-      if (c != null) {
-       String phrase = c.optString("it", "");
-       new AlertDialog.Builder(a)
-        .setTitle("Repasar tarjeta")
-        .setMessage("Italiano:\n" + phrase + "\n\nNota: " + c.optString("note", ""))
-        .setPositiveButton("Escuchar (Normal)", (d2, w2) -> a.speak(phrase, 0, 1.0f))
-        .setNeutralButton("Escuchar lento (0.75x)", (d2, w2) -> a.speak(phrase, 0, 0.75f))
-        .setNegativeButton("Cerrar", null)
-        .show();
-      }
-     }
-    })
-    .setNegativeButton("Cerrar", null)
-    .show();
-  } catch (Exception e) {
-   a.toast("Error abriendo flashcards");
-  }
- }
-
- public static void openQuickPhrases(MainActivity a) {
-  final String[] labels = {
-   "Buongiorno! Come stai? (Buenos días)",
-   "Quanto costa questo? (¿Cuánto cuesta esto?)",
-   "Non capisco, può ripetere più lentamente? (No entiendo, ¿puede repetir?)",
-   "Dov'è la stazione o il bagno? (¿Dónde está la estación o el baño?)",
-   "Grazie mille, sei gentilissima! (¡Muchas gracias, eres muy amable!)"
-  };
-  final String[] italian = {
-   "Buongiorno! Come stai?",
-   "Quanto costa questo?",
-   "Non capisco, può ripetere più lentamente?",
-   "Dov'è la stazione o il bagno?",
-   "Grazie mille, sei gentilissima!"
-  };
-
-  new AlertDialog.Builder(a)
-   .setTitle("Frases rápidas · 1 toque")
-   .setItems(labels, (d, which) -> {
-    recordActivity(a, 5);
-    String phrase = italian[which];
-    new AlertDialog.Builder(a)
-     .setTitle(phrase)
-     .setPositiveButton("Escuchar audio", (d2, w2) -> a.speak(phrase, 0, 1.0f))
-     .setNeutralButton("Enviar a Sofía", (d2, w2) -> a.ask(phrase))
-     .setNegativeButton("Cerrar", null)
-     .show();
-   })
-   .setNegativeButton("Cerrar", null)
-   .show();
- }
-
- public static void openInterpreter(MainActivity a, String initial) {
-  EditText box = new EditText(a);
-  box.setHint("Escribe en español o italiano para traducir y hablar...");
-  if (!TextUtils.isEmpty(initial)) box.setText(initial);
-
-  new AlertDialog.Builder(a)
-   .setTitle("Modo intérprete rápido")
-   .setView(box)
-   .setPositiveButton("Traducir al italiano", (d, w) -> {
-    String txt = box.getText().toString().trim();
-    if (!txt.isEmpty()) {
-     recordActivity(a, 10);
-     a.ask("Traduci in italiano naturale e chiarisci eventuali sfumature: " + txt);
-    }
-   })
-   .setNeutralButton("Leer en italiano", (d, w) -> {
-    String txt = box.getText().toString().trim();
-    if (!txt.isEmpty()) a.speak(txt, 0, 1.0f);
-   })
-   .setNegativeButton("Cerrar", null)
-   .show();
- }
-
- public static void showStats(MainActivity a) {
-  int xp = a.prefs.getInt(XP_KEY, 0);
-  int streak = a.prefs.getInt(STREAK_KEY, 1);
-  String level = xp >= 300 ? "Intermedio (B1)" : (xp >= 120 ? "Elemental (A2)" : "Principiante (A1)");
-  new AlertDialog.Builder(a)
-   .setTitle("Tu progreso · Impara l'italiano")
-   .setMessage("🔥 Racha activa: " + streak + " día(s)\n⭐ Experiencia total: " + xp + " XP\n📈 Nivel estimado: " + level)
-   .setPositiveButton("¡A practicar!", (d, w) -> a.ask("Ciao Sofia! Facciamo un breve esercizio di italiano per il mio livello " + level + "."))
-   .setNegativeButton("Cerrar", null)
-   .show();
- }
-
- public static void chooseOutfit(MainActivity a) {
-  final String[] outfits = {
-   "Profesora elegante / seductora",
-   "Clase clásica en aula",
-   "Salida casual en Italia",
-   "Modo noche / gala"
-  };
-  new AlertDialog.Builder(a)
-   .setTitle("Estilo y guardarropa de Sofía")
-   .setItems(outfits, (d, which) -> {
-    a.prefs.edit().putString(OUTFIT_KEY, outfits[which]).apply();
-    a.toast("Estilo guardado: " + outfits[which]);
-   })
-   .setNegativeButton("Cerrar", null)
-   .show();
- }
-
- public static void recordActivity(MainActivity a, int gainedXp) {
-  if (a == null || a.prefs == null) return;
-  SharedPreferences prefs = a.prefs;
-  String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
-  String lastDay = prefs.getString(LAST_DAY_KEY, "");
-  int streak = prefs.getInt(STREAK_KEY, 1);
-  if (!today.equals(lastDay)) {
-   streak = lastDay.isEmpty() ? 1 : streak + 1;
-   prefs.edit().putString(LAST_DAY_KEY, today).putInt(STREAK_KEY, streak).apply();
-  }
-  int currentXp = prefs.getInt(XP_KEY, 0);
-  prefs.edit().putInt(XP_KEY, currentXp + Math.max(0, gainedXp)).apply();
- }
-}
+name: Compilar Impara l'italiano
+​on:
+push:
+branches: [ main ]
+workflow_dispatch:
+​jobs:
+build:
+runs-on: ubuntu-latest
+permissions:
+contents: write
+​steps:
+- name: Descargar repositorio
+uses: actions/checkout@v4
+​- name: Configurar Java 17
+uses: actions/setup-java@v4
+with:
+distribution: 'temurin'
+java-version: '17'
+​- name: Descomprimir codigo y aplicar mejoras
+run: |
+unzip -o parlora_551_ligero.zip
+if [ -d "overrides" ]; then
+cp -rv overrides/* build551/src/com/germansilva/italianomaestro/
+fi
+​- name: Descargar APK base y llave fija desde Releases
+env:
+GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+run: |
+gh release download Base --pattern "*.apk" -D .
+if gh release download Base --pattern "impara.jks" -D . 2>/dev/null; then
+echo "Llave fija cargada correctamente"
+else
+keytool -genkeypair -v -keystore impara.jks -alias impara -keyalg RSA -keysize 2048 -validity 10000 
+-storepass android -keypass android -dname "CN=Impara,O=GermanSilva,C=HN"
+gh release upload Base impara.jks
+echo "Llave fija creada y guardada en Base"
+fi
+ls -lh *.apk impara.jks
+​- name: Compilar Java
+run: |
+mkdir -p build551/deps build551/appclasses build551/dex
+curl -sL -o build551/deps/json.jar https://repo1.maven.org/maven2/org/json/json/20231013/json-20231013.jar
+ANDROID_JAR=$(ls -1 "$ANDROID_HOME"/platforms/android-/android.jar | sort -V | tail -n 1)
+find build551/src build551/supportsrc build551/stubs -name ".java" > build551/java-sources.txt
+javac -nowarn 
+-cp "build551/deps/json.jar:$ANDROID_JAR:build551/deps-extra/sherpa-api.jar" 
+-d build551/appclasses @build551/java-sources.txt
+​- name: Convertir a DEX y empaquetar APK
+run: |
+python3 - << 'EOF'
+from pathlib import Path
+import zipfile
+​root = Path('build551')
+families = {p.stem for p in (root/'src/com/germansilva/italianomaestro').glob('.java')}
+with zipfile.ZipFile(root/'release.jar', 'w') as z:
+for p in (root/'appclasses').rglob('.class'):
+if p.stem.split('$')[0] in families:
+z.write(p, str(p.relative_to(root/'appclasses')))
+EOF
+​BUILD_TOOLS=$(ls -1d "ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
+ANDROID_JAR=(ls -1 "$ANDROID_HOME"/platforms/android-*/android.jar | sort -V | tail -n 1)
+"$BUILD_TOOLS/d8" --min-api 31 --lib "$ANDROID_JAR" --output build551/dex build551/release.jar
+​python3 - << 'EOF'
+import zipfile, copy
+from pathlib import Path
+​dex_bytes = Path('build551/dex/classes.dex').read_bytes()
+with zipfile.ZipFile('Parlora_5_51.apk', 'r') as old, zipfile.ZipFile('unsigned.apk', 'w') as out:
+for item in old.infolist():
+n = item.filename
+if n.startswith('META-INF/'):
+continue
+if n == 'classes45.dex':
+out.writestr(zipfile.ZipInfo('classes45.dex'), dex_bytes, compress_type=zipfile.ZIP_STORED)
+else:
+info = copy.copy(item)
+out.writestr(info, old.read(n))
+EOF
+​"$BUILD_TOOLS/zipalign" -p -f 4 unsigned.apk aligned.apk
+"$BUILD_TOOLS/apksigner" sign --ks impara.jks --ks-pass pass:android --key-pass pass:android 
+--out Impara_l_italiano.apk aligned.apk
+ls -lh Impara_l_italiano.apk
+​- name: Subir nuevo APK
+uses: actions/upload-artifact@v4
+with:
+name: Impara-Italiano-APK
+path: Impara_l_italiano.apk
