@@ -9,7 +9,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
 
     steps:
       - name: Descargar repositorio
@@ -28,12 +28,20 @@ jobs:
             cp -rv overrides/* build551/src/com/germansilva/italianomaestro/
           fi
 
-      - name: Descargar APK base desde Releases
+      - name: Descargar APK base y llave fija desde Releases
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release download Base --pattern "*.apk" -D .
-          ls -lh *.apk
+          if gh release download Base --pattern "impara.jks" -D . 2>/dev/null; then
+            echo "Llave fija cargada correctamente"
+          else
+            keytool -genkeypair -v -keystore impara.jks -alias impara -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass android -keypass android -dname "CN=Impara,O=GermanSilva,C=HN"
+            gh release upload Base impara.jks
+            echo "Llave fija creada y guardada en Base"
+          fi
+          ls -lh *.apk impara.jks
 
       - name: Compilar Java
         run: |
@@ -81,8 +89,6 @@ jobs:
           EOF
 
           "$BUILD_TOOLS/zipalign" -p -f 4 unsigned.apk aligned.apk
-          keytool -genkeypair -v -keystore impara.jks -alias impara -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass android -keypass android -dname "CN=Impara,O=GermanSilva,C=HN"
           "$BUILD_TOOLS/apksigner" sign --ks impara.jks --ks-pass pass:android --key-pass pass:android \
             --out Impara_l_italiano.apk aligned.apk
           ls -lh Impara_l_italiano.apk
