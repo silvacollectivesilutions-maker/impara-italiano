@@ -42,7 +42,7 @@ jobs:
           ANDROID_JAR=$(ls -1 "$ANDROID_HOME"/platforms/android-*/android.jar | sort -V | tail -n 1)
           find build551/src build551/supportsrc build551/stubs -name "*.java" > build551/java-sources.txt
           javac -nowarn \
-            -cp "$ANDROID_JAR:build551/deps/json.jar:build551/deps-extra/sherpa-api.jar" \
+            -cp "build551/deps/json.jar:$ANDROID_JAR:build551/deps-extra/sherpa-api.jar" \
             -d build551/appclasses @build551/java-sources.txt
 
       - name: Convertir a DEX y empaquetar APK
