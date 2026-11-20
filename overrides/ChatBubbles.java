@@ -15,7 +15,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import org.json.*;
 
-/** Burbujas del chat con iconos limpios estilo IA premium, pistas compactas y menú oscuro integrado. */
+/** Burbujas del chat con iconos limpios y modernos, pistas compactas y control de audio. */
 public final class ChatBubbles {
  private static final int INK = 0xffffffff;
  private static final String HIST_KEY = "impara_chat_history_v1";
@@ -45,60 +45,61 @@ public final class ChatBubbles {
   }
  }
 
- /** Estiliza un botón de acción con diseño limpio, fino y minimalista sin cajas gruesas. */
- private static void styleMinimalAction(MainActivity a, Button b, String cleanLabel, int widthDp) {
+ /** Detecta si una cadena contiene palabras clave típicas en español. */
+ private static boolean looksLikeSpanish(String s) {
+  if (TextUtils.isEmpty(s)) return false;
+  String low = s.toLowerCase(Locale.ROOT);
+  return low.contains("¿") || low.contains("¡") || low.contains("ñ")
+   || low.contains(" pronunc") || low.contains(" español") || low.contains(" espanol")
+   || low.contains(" no sé ") || low.contains(" no se ") || low.contains(" cómo ") || low.contains(" como ");
+ }
+
+ /** Estiliza un botón con apariencia moderna, limpia y sin cajas pesadas. */
+ private static void styleModernIconButton(MainActivity a, Button b, String glyph, String desc, int widthDp) {
   try {
    if (b == null) return;
    b.setAllCaps(false);
    b.setSingleLine(true);
    b.setMaxLines(1);
    b.setEllipsize(TextUtils.TruncateAt.END);
-   b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
-   b.setTextColor(0xFFE2ECF8);
+   b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+   b.setTextColor(0xFFEAF2FC);
    b.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
    b.setMinWidth(0);
    b.setMinimumWidth(0);
    b.setMinHeight(0);
    b.setMinimumHeight(0);
-   b.setPadding(a.dp(7), a.dp(3), a.dp(7), a.dp(3));
+   b.setPadding(a.dp(4), a.dp(2), a.dp(4), a.dp(2));
    b.setGravity(Gravity.CENTER);
 
-   if (cleanLabel != null && !cleanLabel.isEmpty()) {
-    b.setText(cleanLabel);
+   if (!TextUtils.isEmpty(glyph)) {
+    b.setText(glyph);
+   }
+   if (!TextUtils.isEmpty(desc)) {
+    b.setContentDescription(desc);
    }
 
    GradientDrawable bg = new GradientDrawable();
    bg.setShape(GradientDrawable.RECTANGLE);
-   bg.setColor(0x18FFFFFF);
+   bg.setColor(0x16FFFFFF);
    bg.setCornerRadius(a.dp(999));
-   bg.setStroke(Math.max(1, a.dp(1)), 0x26FFFFFF);
+   bg.setStroke(Math.max(1, a.dp(1)), 0x24FFFFFF);
    b.setBackground(bg);
 
-   // Reducir tamaño de drawables internos si el botón trae icono nativo
-   android.graphics.drawable.Drawable[] drawables = b.getCompoundDrawables();
-   int sz = a.dp(14);
-   for (int i = 0; i < drawables.length; i++) {
-    if (drawables[i] != null) {
-     drawables[i].mutate();
-     drawables[i].setBounds(0, 0, sz, sz);
-     drawables[i].setTint(0xFFE2ECF8);
-    }
-   }
-   b.setCompoundDrawables(drawables[0], drawables[1], drawables[2], drawables[3]);
-   b.setCompoundDrawablePadding(a.dp(4));
+   // Ocultar drawables heredados grandes para dejar el icono moderno limpio
+   b.setCompoundDrawables(null, null, null, null);
+   b.setCompoundDrawablePadding(0);
 
-   if (widthDp > 0) {
-    ViewGroup.LayoutParams lp = b.getLayoutParams();
-    if (lp != null) {
-     lp.width = a.dp(widthDp);
-     lp.height = a.dp(28);
-     b.setLayoutParams(lp);
-    }
+   ViewGroup.LayoutParams lp = b.getLayoutParams();
+   if (lp != null && widthDp > 0) {
+    lp.width = a.dp(widthDp);
+    lp.height = a.dp(28);
+    b.setLayoutParams(lp);
    }
   } catch (Throwable ignored) {}
  }
 
- /** Compacta y ordena las tarjetas de "Pistas" para que se vean finas y bien alineadas. */
+ /** Compacta y ordena las tarjetas de "Pistas" para que se vean pequeñas y bien acomodadas. */
  private static void compactHints(MainActivity a, ViewGroup root) {
   try {
    if (root == null) return;
@@ -106,38 +107,39 @@ public final class ChatBubbles {
     View child = root.getChildAt(i);
     if (child instanceof ViewGroup) {
      ViewGroup vg = (ViewGroup) child;
-     // Detectar filas horizontales de pistas (suelen contener varios botones o tarjetas)
      if (vg instanceof LinearLayout && ((LinearLayout) vg).getOrientation() == LinearLayout.HORIZONTAL) {
-      int btnCount = 0;
+      int items = 0;
       for (int j = 0; j < vg.getChildCount(); j++) {
        if (vg.getChildAt(j) instanceof Button || vg.getChildAt(j) instanceof TextView) {
-        btnCount++;
+        items++;
        }
       }
-      if (btnCount >= 2) {
+      if (items >= 2) {
        vg.setPadding(a.dp(4), a.dp(2), a.dp(4), a.dp(2));
        for (int j = 0; j < vg.getChildCount(); j++) {
         View item = vg.getChildAt(j);
         ViewGroup.LayoutParams itemLp = item.getLayoutParams();
         if (itemLp instanceof ViewGroup.MarginLayoutParams) {
          ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) itemLp;
-         mlp.setMargins(a.dp(4), a.dp(2), a.dp(4), a.dp(2));
-         if (mlp.height > a.dp(54) || mlp.height == ViewGroup.LayoutParams.MATCH_PARENT) {
+         mlp.setMargins(a.dp(3), a.dp(1), a.dp(3), a.dp(1));
+         if (mlp.height > a.dp(46) || mlp.height == ViewGroup.LayoutParams.MATCH_PARENT) {
           mlp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
          }
          item.setLayoutParams(mlp);
         }
         item.setMinimumHeight(0);
-        item.setPadding(a.dp(10), a.dp(6), a.dp(10), a.dp(6));
+        item.setPadding(a.dp(8), a.dp(4), a.dp(8), a.dp(4));
         if (item instanceof TextView) {
          TextView tv = (TextView) item;
-         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
-         tv.setLineSpacing(a.dp(1.5f), 1f);
+         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+         tv.setMaxLines(2);
+         tv.setEllipsize(TextUtils.TruncateAt.END);
+         tv.setLineSpacing(a.dp(1f), 1f);
          GradientDrawable pill = new GradientDrawable();
          pill.setShape(GradientDrawable.RECTANGLE);
-         pill.setColor(0xFF15263D);
-         pill.setCornerRadius(a.dp(12));
-         pill.setStroke(Math.max(1, a.dp(1)), 0x337CC4FF);
+         pill.setColor(0xFF14243A);
+         pill.setCornerRadius(a.dp(10));
+         pill.setStroke(Math.max(1, a.dp(1)), 0x2E7CC4FF);
          tv.setBackground(pill);
         }
        }
@@ -146,6 +148,19 @@ public final class ChatBubbles {
      compactHints(a, vg);
     }
    }
+  } catch (Throwable ignored) {}
+ }
+
+ /** Reproduce audio evitando leer en español cuando se indica que no sabe pronunciar o cuando el texto está en italiano. */
+ private static void speakSafeWithoutForcedSpanish(MainActivity a, String content, float rate) {
+  try {
+   if (a == null || TextUtils.isEmpty(content)) return;
+   String clean = content.trim();
+   if (looksLikeSpanish(clean) && (clean.toLowerCase(Locale.ROOT).contains("pronunc") || clean.toLowerCase(Locale.ROOT).contains("no sé") || clean.toLowerCase(Locale.ROOT).contains("no se"))) {
+    a.toast("Audio en español omitido");
+    return;
+   }
+   a.speak(clean, 0, rate);
   } catch (Throwable ignored) {}
  }
 
@@ -223,8 +238,8 @@ public final class ChatBubbles {
 
    if (spanishAudio != null) {
     detach(spanishAudio);
-    styleMinimalAction(a, spanishAudio, "ES", 0);
-    LinearLayout.LayoutParams spLp = new LinearLayout.LayoutParams(-2, a.dp(28));
+    styleModernIconButton(a, spanishAudio, "♪", "Audio", 32);
+    LinearLayout.LayoutParams spLp = new LinearLayout.LayoutParams(a.dp(32), a.dp(26));
     spLp.topMargin = a.dp(4);
     bubble.addView(spanishAudio, spLp);
    }
@@ -234,26 +249,25 @@ public final class ChatBubbles {
     bubble.addView(table, new LinearLayout.LayoutParams(-1, -2));
    }
 
-   // Barra inferior minimalista estilo IA premium (sin bordes pesados)
+   // Barra inferior con iconos modernos limpios
    LinearLayout actions = new LinearLayout(a);
    actions.setOrientation(LinearLayout.HORIZONTAL);
    actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
    actions.setPadding(0, a.dp(5), 0, a.dp(1));
 
-   if (audio != null) addMinimalChip(a, actions, audio, "Oír", 44);
-   if (translate != null) addMinimalChip(a, actions, translate, "Traducir", 62);
-   if (explain != null) addMinimalChip(a, actions, explain, "Explicar", 60);
-   if (columns != null) addMinimalChip(a, actions, columns, "Tabla", 50);
+   if (audio != null) addIconAction(a, actions, audio, "▶", "Escuchar", 32);
+   if (translate != null) addIconAction(a, actions, translate, "⇄", "Traducir", 32);
+   if (explain != null) addIconAction(a, actions, explain, "✦", "Explicar", 32);
+   if (columns != null) addIconAction(a, actions, columns, "⊞", "Tabla", 32);
 
-   Button shareButton = DeskUI.button(a, "Compartir", () -> ShareHub549.reply(a, text), false);
-   addMinimalChip(a, actions, shareButton, "↗", 32);
+   Button shareButton = DeskUI.button(a, "↗", () -> ShareHub549.reply(a, text), false);
+   addIconAction(a, actions, shareButton, "↗", "Compartir", 32);
 
-   Button saveButton = DeskUI.button(a, "Guardar", () -> ImparaSuperApp.saveFlashcardDirect(a, text.getText().toString()), false);
-   addMinimalChip(a, actions, saveButton, "✦", 32);
+   Button saveButton = DeskUI.button(a, "♡", () -> ImparaSuperApp.saveFlashcardDirect(a, text.getText().toString()), false);
+   addIconAction(a, actions, saveButton, "♡", "Guardar", 32);
 
-   Button menuButton = DeskUI.button(a, "⋮", () -> showMessageMenu(a, bubble, text, user), false);
-   menuButton.setContentDescription("Opciones del mensaje");
-   addMinimalChip(a, actions, menuButton, "•••", 36);
+   Button menuButton = DeskUI.button(a, "•••", () -> showMessageMenu(a, bubble, text, user), false);
+   addIconAction(a, actions, menuButton, "•••", "Opciones", 34);
 
    HorizontalScrollView strip = new HorizontalScrollView(a);
    strip.setHorizontalScrollBarEnabled(false);
@@ -276,10 +290,10 @@ public final class ChatBubbles {
     a.root.post(() -> {
      try {
       ButtonStudio.apply(a);
-      styleMinimalAction(a, fAudio, "Oír", 44);
-      styleMinimalAction(a, fTranslate, "Traducir", 62);
-      styleMinimalAction(a, fExplain, "Explicar", 60);
-      styleMinimalAction(a, fColumns, "Tabla", 50);
+      styleModernIconButton(a, fAudio, "▶", "Escuchar", 32);
+      styleModernIconButton(a, fTranslate, "⇄", "Traducir", 32);
+      styleModernIconButton(a, fExplain, "✦", "Explicar", 32);
+      styleModernIconButton(a, fColumns, "⊞", "Tabla", 32);
       if (a.root instanceof ViewGroup) {
        compactHints(a, (ViewGroup) a.root);
       }
@@ -291,10 +305,10 @@ public final class ChatBubbles {
   return text;
  }
 
- private static void addMinimalChip(MainActivity a, LinearLayout row, Button b, String label, int widthDp) {
+ private static void addIconAction(MainActivity a, LinearLayout row, Button b, String glyph, String desc, int widthDp) {
   if (b == null) return;
   detach(b);
-  styleMinimalAction(a, b, label, widthDp);
+  styleModernIconButton(a, b, glyph, desc, widthDp);
   LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(a.dp(widthDp), a.dp(28));
   lp.setMarginStart(a.dp(5));
   row.addView(b, lp);
@@ -337,7 +351,7 @@ public final class ChatBubbles {
   root.addView(ImparaSuperApp.buildOptionRow(a, "🐢", "Escuchar lento (0.75x)",
    "Repetir pronunciación despacio", () -> {
     dismiss.run();
-    a.speak(msg, 0, 0.75f);
+    speakSafeWithoutForcedSpanish(a, msg, 0.75f);
    }), gap);
 
   root.addView(ImparaSuperApp.buildOptionRow(a, "✏️", "Editar mensaje",
@@ -542,7 +556,7 @@ public final class ChatBubbles {
 
  static void add(MainActivity a, LinearLayout row, Button b, int width, String label, int icon) {
   detach(b);
-  styleMinimalAction(a, b, label, width > 0 ? width : 44);
-  row.addView(b, new LinearLayout.LayoutParams(a.dp(width > 0 ? width : 44), a.dp(28)));
+  styleModernIconButton(a, b, label, label, width > 0 ? width : 32);
+  row.addView(b, new LinearLayout.LayoutParams(a.dp(width > 0 ? width : 32), a.dp(28)));
  }
 }
