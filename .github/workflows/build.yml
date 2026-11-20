@@ -35,14 +35,13 @@ jobs:
           gh release download Base --pattern "*.apk" -D .
           ls -lh *.apk
 
-      - name: Preparar herramientas y compilar Java
+      - name: Compilar Java
         run: |
           mkdir -p build551/deps build551/appclasses build551/dex
-          curl -sL -o build551/deps/ecj.jar https://repo1.maven.org/maven2/org/eclipse/jdt/ecj/3.38.0/ecj-3.38.0.jar
           curl -sL -o build551/deps/json.jar https://repo1.maven.org/maven2/org/json/json/20231013/json-20231013.jar
           ANDROID_JAR=$(ls -1 "$ANDROID_HOME"/platforms/android-*/android.jar | sort -V | tail -n 1)
           find build551/src build551/supportsrc build551/stubs -name "*.java" > build551/java-sources.txt
-          java -jar build551/deps/ecj.jar -17 -nowarn \
+          javac -nowarn \
             -cp "$ANDROID_JAR:build551/deps/json.jar:build551/deps-extra/sherpa-api.jar" \
             -d build551/appclasses @build551/java-sources.txt
 
