@@ -33,23 +33,63 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           gh release download Base --pattern "*.apk" -D .
-          cp Parlora_5_51.apk Parlora_5_50.apk || true
           ls -lh *.apk
 
-      - name: Preparar herramientas
+      - name: Preparar herramientas y compilar Java
         run: |
-          mkdir -p build551/deps
-          curl -L -o build551/deps/ecj.jar https://repo1.maven.org/maven2/org/eclipse/jdt/ecj/3.38.0/ecj-3.38.0.jar
-          cp "$ANDROID_HOME/platforms/android-34/android.jar" build551/deps/android.jar || true
+          mkdir -p build551/deps build551/appclasses build551/dex
+          curl -sL -o build551/deps/ecj.jar https://repo1.maven.org/maven2/org/eclipse/jdt/ecj/3.38.0/ecj-3.38.0.jar
+          curl -sL -o build551/deps/json.jar https://repo1.maven.org/maven2/org/json/json/20231013/json-20231013.jar
+          ANDROID_JAR=$(ls -1 "$ANDROID_HOME"/platforms/android-*/android.jar | sort -V | tail -n 1)
+          find build551/src build551/supportsrc build551/stubs -name "*.java" > build551/java-sources.txt
+          java -jar build551/deps/ecj.jar -17 -nowarn \
+            -cp "$ANDROID_JAR:build551/deps/json.jar:build551/deps-extra/sherpa-api.jar" \
+            -d build551/appclasses @build551/java-sources.txt
 
-      - name: Ejecutar compilacion
+      - name: Convertir a DEX y empaquetar APK
         run: |
-          python3 build551/build.py
+          python3 - << 'EOF'
+          from pathlib import Path
+          import zipfile
+
+          root = Path('build551')
+          families = {p.stem for p in (root/'src/com/germansilva/italianomaestro').glob('*.java')}
+          with zipfile.ZipFile(root/'release.jar', 'w') as z:
+              for p in (root/'appclasses').rglob('*.class'):
+                  if p.stem.split('$')[0] in families:
+                      z.write(p, str(p.relative_to(root/'appclasses')))
+          EOF
+
+          BUILD_TOOLS=$(ls -1d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
+          ANDROID_JAR=$(ls -1 "$ANDROID_HOME"/platforms/android-*/android.jar | sort -V | tail -n 1)
+          "$BUILD_TOOLS/d8" --min-api 31 --lib "$ANDROID_JAR" --output build551/dex build551/release.jar
+
+          python3 - << 'EOF'
+          import zipfile, copy
+          from pathlib import Path
+
+          dex_bytes = Path('build551/dex/classes.dex').read_bytes()
+          with zipfile.ZipFile('Parlora_5_51.apk', 'r') as old, zipfile.ZipFile('unsigned.apk', 'w') as out:
+              for item in old.infolist():
+                  n = item.filename
+                  if n.startswith('META-INF/'):
+                      continue
+                  if n == 'classes45.dex':
+                      out.writestr(zipfile.ZipInfo('classes45.dex'), dex_bytes, compress_type=zipfile.ZIP_STORED)
+                  else:
+                      info = copy.copy(item)
+                      out.writestr(info, old.read(n))
+          EOF
+
+          "$BUILD_TOOLS/zipalign" -p -f 4 unsigned.apk aligned.apk
+          keytool -genkeypair -v -keystore impara.jks -alias impara -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass android -keypass android -dname "CN=Impara,O=GermanSilva,C=HN"
+          "$BUILD_TOOLS/apksigner" sign --ks impara.jks --ks-pass pass:android --key-pass pass:android \
+            --out Impara_l_italiano.apk aligned.apk
+          ls -lh Impara_l_italiano.apk
 
       - name: Subir nuevo APK
         uses: actions/upload-artifact@v4
         with:
           name: Impara-Italiano-APK
-          path: |
-            *.apk
-            build551/*.apk
+          path: Impara_l_italiano.apk
