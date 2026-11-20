@@ -1,31 +1,52 @@
 package com.germansilva.italianomaestro;
+
 import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.view.*;
 import android.widget.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import org.json.*;
 
-/** Builds the final bubble explicitly, retaining original callbacks + Edit, Delete, Slow Audio & History. */
 public final class ChatBubbles {
  private static final int INK = 0xffffffff;
  private static final String HIST_KEY = "impara_chat_history_v1";
 
- static void detach(View v) { if (v != null && v.getParent() instanceof ViewGroup) ((ViewGroup) v.getParent()).removeView(v); }
- static ArrayList<View> children(ViewGroup g) { ArrayList<View> r = new ArrayList<>(); for (int i = 0; i < g.getChildCount(); i++) r.add(g.getChildAt(i)); return r; }
- static void buttons(View v, View table, List<Button> out) { if (v == table) return; if (v instanceof Button) out.add((Button) v); else if (v instanceof ViewGroup) for (View child : children((ViewGroup) v)) buttons(child, table, out); }
+ static void detach(View v) {
+  if (v != null && v.getParent() instanceof ViewGroup) ((ViewGroup) v.getParent()).removeView(v);
+ }
+
+ static ArrayList<View> children(ViewGroup g) {
+  ArrayList<View> r = new ArrayList<>();
+  for (int i = 0; i < g.getChildCount(); i++) r.add(g.getChildAt(i));
+  return r;
+ }
+
+ static void buttons(View v, View table, List<Button> out) {
+  if (v == table) return;
+  if (v instanceof Button) out.add((Button) v);
+  else if (v instanceof ViewGroup) for (View c : children((ViewGroup) v)) buttons(c, table, out);
+ }
 
  public static TextView create(MainActivity a, String value, boolean user) {
-  if (user) MoreCards546.user(a, value);
+  if (user) {
+   MoreCards546.user(a, value);
+   ImparaSuperApp.recordActivity(a, 5);
+  }
   TextView text = a.legacyMessage(value, user);
   if (a.page != 1 || a.chat == null) return text;
+
   View old = text;
   while (old.getParent() instanceof View && old.getParent() != a.chat) old = (View) old.getParent();
   if (old.getParent() != a.chat || !(old instanceof ViewGroup)) return text;
+
   int index = a.chat.indexOfChild(old);
   View table = old.findViewWithTag("study-columns");
   ArrayList<Button> all = new ArrayList<>();
   buttons(old, table, all);
+
   Button audio = null, translate = null, explain = null, columns = null, spanishAudio = null;
   for (Button b : all) {
    String d = String.valueOf(b.getContentDescription()), label = b.getText().toString();
@@ -35,15 +56,21 @@ public final class ChatBubbles {
    else if (b.getTag() == text || d.contains("Paola") || d.contains("Escuchar o detener")) audio = b;
    else if (label.contains("Explicar") || label.contains("significado") || label.contains("Rayos X")) explain = b;
   }
+
   ArrayList<TextView> translations = new ArrayList<>();
-  for (View v : children((ViewGroup) old)) if (v instanceof TextView && !(v instanceof Button) && v != text) translations.add((TextView) v);
+  for (View v : children((ViewGroup) old)) {
+   if (v instanceof TextView && !(v instanceof Button) && v != text) translations.add((TextView) v);
+  }
 
   LinearLayout bubble = new LinearLayout(a);
   bubble.setOrientation(LinearLayout.VERTICAL);
   bubble.setPadding(a.dp(11), a.dp(9), a.dp(11), a.dp(4));
   bubble.setBackground(new WallStyle.Bubble(a, user));
   bubble.setTag(0x7e002602, user);
-  bubble.setOnLongClickListener(v -> { showMessageMenu(a, bubble, text, user); return true; });
+  bubble.setOnLongClickListener(v -> {
+   showMessageMenu(a, bubble, text, user);
+   return true;
+  });
 
   LinearLayout body = new LinearLayout(a);
   body.setOrientation(LinearLayout.VERTICAL);
@@ -65,8 +92,16 @@ public final class ChatBubbles {
    SofiaGlass.surface(a, t, 10, false, 0, false);
    bubble.addView(t, new LinearLayout.LayoutParams(-1, -2));
   }
-  if (spanishAudio != null) { detach(spanishAudio); CompactSofia.fit(a, spanishAudio, null, 0); bubble.addView(spanishAudio, new LinearLayout.LayoutParams(-2, a.dp(36))); }
-  if (table != null) { detach(table); bubble.addView(table, new LinearLayout.LayoutParams(-1, -2)); }
+
+  if (spanishAudio != null) {
+   detach(spanishAudio);
+   CompactSofia.fit(a, spanishAudio, null, 0);
+   bubble.addView(spanishAudio, new LinearLayout.LayoutParams(-2, a.dp(36)));
+  }
+  if (table != null) {
+   detach(table);
+   bubble.addView(table, new LinearLayout.LayoutParams(-1, -2));
+  }
 
   LinearLayout actions = new LinearLayout(a);
   actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
@@ -74,10 +109,13 @@ public final class ChatBubbles {
   if (translate != null) ActionStrip543.add(a, actions, translate, "Traducir", 64);
   if (explain != null) ActionStrip543.add(a, actions, explain, "Explicar", 62);
   if (columns != null) ActionStrip543.add(a, actions, columns, "Columnas", 68);
+
   Button shareButton = DeskUI.button(a, "Compartir", () -> ShareHub549.reply(a, text), false);
   ActionStrip543.add(a, actions, shareButton, "Compartir", 36);
+
   Button saveButton = DeskUI.button(a, "Guardar", () -> Repaso546.save(a, text.getText().toString(), ""), false);
   ActionStrip543.add(a, actions, saveButton, "Guardar", 36);
+
   Button menuButton = DeskUI.button(a, "⋮", () -> showMessageMenu(a, bubble, text, user), false);
   menuButton.setContentDescription("Opciones del mensaje");
   ActionStrip543.add(a, actions, menuButton, "◉", 32);
@@ -99,70 +137,128 @@ public final class ChatBubbles {
  }
 
  private static void showMessageMenu(MainActivity a, LinearLayout bubble, TextView text, boolean user) {
-  String[] opts = {
-   "✏️ Editar mensaje",
-   "🗑️ Borrar mensaje",
-   "🐢 Escuchar lento (0.75x)",
-   "🗂️ Historial de conversaciones",
-   "🎨 Cambiar color de burbuja"
-  };
-  new AlertDialog.Builder(a)
-   .setTitle("Impara l'italiano · Opciones")
-   .setItems(opts, (d, which) -> {
-    if (which == 0) editMessage(a, text, user);
-    else if (which == 1) {
-     if (bubble.getParent() instanceof ViewGroup) ((ViewGroup) bubble.getParent()).removeView(bubble);
-     a.toast("Mensaje borrado");
-    } else if (which == 2) {
-     a.speak(text.getText().toString(), 0, 0.75f);
-    } else if (which == 3) {
-     showHistoryDialog(a);
-    } else if (which == 4) {
-     ChatLook542.palette(a, user);
+  ScrollView scroll = new ScrollView(a);
+  scroll.setVerticalScrollBarEnabled(false);
+  LinearLayout root = ImparaSuperApp.dialogHeader(a,
+   "IMPARA L'ITALIANO · " + (user ? "TU MENSAJE" : "SOFÍA"),
+   "Opciones rápidas");
+
+  final AlertDialog[] holder = new AlertDialog[1];
+  Runnable dismiss = () -> { if (holder[0] != null && holder[0].isShowing()) holder[0].dismiss(); };
+
+  LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
+  gap.setMargins(0, 0, 0, a.dp(7));
+
+  root.addView(ImparaSuperApp.buildOptionRow(a, "⚡", "Centro Súper App",
+   "Corrector, flashcards, juegos, jerga, intérprete y Sofía", () -> {
+    dismiss.run();
+    ImparaSuperApp.openHub(a, text.getText().toString());
+   }), gap);
+
+  root.addView(ImparaSuperApp.buildOptionRow(a, "✏️", "Editar mensaje",
+   user ? "Corregir o reenviar a Sofía" : "Editar texto en pantalla", () -> {
+    dismiss.run();
+    editMessage(a, text, user);
+   }), gap);
+
+  root.addView(ImparaSuperApp.buildOptionRow(a, "🗑️", "Borrar mensaje",
+   "Quitar esta burbuja del chat", () -> {
+    dismiss.run();
+    if (bubble.getParent() instanceof ViewGroup) ((ViewGroup) bubble.getParent()).removeView(bubble);
+    a.toast("Mensaje borrado");
+   }), gap);
+
+  root.addView(ImparaSuperApp.buildOptionRow(a, "🐢", "Escuchar lento (0.75x)",
+   "Repetir pronunciación despacio", () -> {
+    dismiss.run();
+    a.speak(text.getText().toString(), 0, 0.75f);
+   }), gap);
+
+  root.addView(ImparaSuperApp.buildOptionRow(a, "📋", "Copiar texto",
+   "Guardar en el portapapeles", () -> {
+    dismiss.run();
+    ClipboardManager cm = (ClipboardManager) a.getSystemService(Context.CLIPBOARD_SERVICE);
+    if (cm != null) {
+     cm.setPrimaryClip(ClipData.newPlainText("Impara l'italiano", text.getText().toString()));
+     a.toast("Texto copiado");
     }
-   })
-   .show();
+   }), gap);
+
+  root.addView(ImparaSuperApp.buildOptionRow(a, "🗂️", "Historial de conversaciones",
+   "Guardar, abrir o eliminar sesiones", () -> {
+    dismiss.run();
+    showHistoryDialog(a);
+   }), gap);
+
+  root.addView(ImparaSuperApp.buildOptionRow(a, "🎨", "Cambiar color de burbuja",
+   "Personalizar paleta del chat", () -> {
+    dismiss.run();
+    ChatLook542.palette(a, user);
+   }), new LinearLayout.LayoutParams(-1, -2));
+
+  scroll.addView(root);
+  AlertDialog dialog = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
+  holder[0] = dialog;
+  ImparaSuperApp.styleDialogWindow(a, dialog, scroll);
  }
 
  private static void editMessage(MainActivity a, TextView text, boolean user) {
-  EditText et = new EditText(a);
-  et.setText(text.getText().toString());
-  et.setSelection(et.getText().length());
+  LinearLayout box = ImparaSuperApp.dialogHeader(a, "IMPARA L'ITALIANO", "Editar mensaje");
+  EditText et = ImparaSuperApp.styledInput(a, "Escribe tu mensaje...", text.getText().toString());
+  box.addView(et);
+
   AlertDialog.Builder b = new AlertDialog.Builder(a)
-   .setTitle("Editar mensaje")
-   .setView(et)
    .setPositiveButton("Guardar", (d, w) -> {
     String val = et.getText().toString().trim();
     if (!val.isEmpty()) { text.setText(val); a.toast("Mensaje editado"); }
    })
    .setNegativeButton("Cancelar", null);
+
   if (user) {
    b.setNeutralButton("Guardar y reenviar", (d, w) -> {
     String val = et.getText().toString().trim();
     if (!val.isEmpty()) { text.setText(val); a.ask(val); }
    });
   }
-  b.show();
+  ImparaSuperApp.styleDialogWindow(a, b.create(), box);
  }
 
  private static void showHistoryDialog(MainActivity a) {
   try {
    JSONArray arr = new JSONArray(a.prefs.getString(HIST_KEY, "[]"));
-   ArrayList<String> labels = new ArrayList<>();
-   labels.add("➕ Guardar conversación actual");
+   ScrollView scroll = new ScrollView(a);
+   LinearLayout root = ImparaSuperApp.dialogHeader(a, "HISTORIAL OFFLINE", "Conversaciones guardadas");
+
+   final AlertDialog[] holder = new AlertDialog[1];
+   Runnable dismiss = () -> { if (holder[0] != null && holder[0].isShowing()) holder[0].dismiss(); };
+
+   LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
+   gap.setMargins(0, 0, 0, a.dp(7));
+
+   root.addView(ImparaSuperApp.buildOptionRow(a, "➕", "Guardar conversación actual",
+    "Guarda todos los mensajes visibles", () -> {
+     dismiss.run();
+     saveCurrentChat(a);
+    }), gap);
+
    for (int i = arr.length() - 1; i >= 0; i--) {
+    final int idx = i;
     JSONObject o = arr.getJSONObject(i);
-    labels.add("💬 " + o.optString("title", "Sesión") + " (" + o.optJSONArray("msgs").length() + " msgs)");
+    int count = o.optJSONArray("msgs") != null ? o.optJSONArray("msgs").length() : 0;
+    root.addView(ImparaSuperApp.buildOptionRow(a, "💬", o.optString("title", "Sesión"),
+     count + " mensajes", () -> {
+      dismiss.run();
+      openSavedChat(a, idx);
+     }), gap);
    }
-   new AlertDialog.Builder(a)
-    .setTitle("Historial de conversaciones")
-    .setItems(labels.toArray(new String[0]), (d, which) -> {
-     if (which == 0) saveCurrentChat(a);
-     else openSavedChat(a, arr.length() - which);
-    })
-    .setNegativeButton("Cerrar", null)
-    .show();
-  } catch (Exception e) { a.toast("Error abriendo historial"); }
+
+   scroll.addView(root);
+   AlertDialog dialog = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
+   holder[0] = dialog;
+   ImparaSuperApp.styleDialogWindow(a, dialog, scroll);
+  } catch (Exception e) {
+   a.toast("Error abriendo historial");
+  }
  }
 
  private static void saveCurrentChat(MainActivity a) {
@@ -185,13 +281,14 @@ public final class ChatBubbles {
    if (msgs.length() == 0) { a.toast("Chat vacío"); return; }
    JSONArray arr = new JSONArray(a.prefs.getString(HIST_KEY, "[]"));
    JSONObject session = new JSONObject();
-   String date = new SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(new Date());
-   session.put("title", date);
+   session.put("title", new SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(new Date()));
    session.put("msgs", msgs);
    arr.put(session);
    a.prefs.edit().putString(HIST_KEY, arr.toString()).apply();
    a.toast("Conversación guardada (" + msgs.length() + " mensajes)");
-  } catch (Exception e) { a.toast("No se pudo guardar"); }
+  } catch (Exception e) {
+   a.toast("No se pudo guardar");
+  }
  }
 
  private static void openSavedChat(MainActivity a, int idx) {
@@ -204,10 +301,18 @@ public final class ChatBubbles {
     JSONObject m = msgs.getJSONObject(i);
     sb.append(m.optBoolean("u") ? "Tú: " : "Sofía: ").append(m.optString("t")).append("\n\n");
    }
-   new AlertDialog.Builder(a)
-    .setTitle("Sesión " + session.optString("title"))
-    .setMessage(sb.toString().trim())
-    .setPositiveButton("Cargar en el chat", (d, w) -> {
+   ScrollView scroll = new ScrollView(a);
+   LinearLayout box = ImparaSuperApp.dialogHeader(a, "SESIÓN GUARDADA", session.optString("title"));
+   TextView body = new TextView(a);
+   body.setText(sb.toString().trim());
+   body.setTextColor(0xFFE6EEF8);
+   body.setTextSize(14);
+   body.setLineSpacing(a.dp(3), 1f);
+   box.addView(body);
+   scroll.addView(box);
+
+   AlertDialog dialog = new AlertDialog.Builder(a)
+    .setPositiveButton("Cargar en chat", (d, w) -> {
      a.chat.removeAllViews();
      for (int i = 0; i < msgs.length(); i++) {
       JSONObject m = msgs.optJSONObject(i);
@@ -221,8 +326,11 @@ public final class ChatBubbles {
      a.toast("Sesión eliminada");
     })
     .setNegativeButton("Cerrar", null)
-    .show();
-  } catch (Exception e) { a.toast("Error al cargar"); }
+    .create();
+   ImparaSuperApp.styleDialogWindow(a, dialog, scroll);
+  } catch (Exception e) {
+   a.toast("Error al cargar");
+  }
  }
 
  private static TextView findMainText(ViewGroup g) {
