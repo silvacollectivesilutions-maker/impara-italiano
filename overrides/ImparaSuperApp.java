@@ -11,7 +11,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import org.json.*;
 
-/** Centro Súper App de Impara l'italiano con 4 temas oscuros, nivel A1-B2 y herramientas offline. */
+/** Centro Súper App de Impara l'italiano (versión blindada anti-cierres). */
 public final class ImparaSuperApp {
  static final int INK = 0xFFFFFFFF;
  static final int STROKE_SUBTLE = 0x33FFFFFF;
@@ -43,6 +43,31 @@ public final class ImparaSuperApp {
  static int bgBadge(MainActivity a) { return palette(a)[2]; }
  static int accent(MainActivity a) { return palette(a)[3]; }
  static int muted(MainActivity a) { return palette(a)[4]; }
+
+ private static LinearLayout.LayoutParams rowGap(MainActivity a, int bottomDp) {
+  LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+  lp.setMargins(0, 0, 0, a.dp(bottomDp));
+  return lp;
+ }
+
+ private static void safeRun(MainActivity a, Runnable action) {
+  try {
+   action.run();
+  } catch (Throwable t) {
+   showDiagError(a, t);
+  }
+ }
+
+ private static void showDiagError(MainActivity a, Throwable t) {
+  try {
+   String msg = t.getClass().getSimpleName() + ": " + String.valueOf(t.getMessage());
+   new AlertDialog.Builder(a)
+    .setTitle("Aviso técnico (Súper App)")
+    .setMessage("Se evitó un cierre inesperado:\n\n" + msg)
+    .setPositiveButton("Entendido", null)
+    .show();
+  } catch (Throwable ignored) {}
+ }
 
  static GradientDrawable roundBg(MainActivity a, int fill, int stroke, int radiusDp) {
   GradientDrawable g = new GradientDrawable();
@@ -97,7 +122,7 @@ public final class ImparaSuperApp {
   row.setBackground(roundBg(a, bgCard(a), STROKE_SUBTLE, 14));
   row.setClickable(true);
   row.setFocusable(true);
-  row.setOnClickListener(v -> action.run());
+  row.setOnClickListener(v -> safeRun(a, action));
 
   TextView badge = new TextView(a);
   badge.setText(badgeText);
@@ -168,13 +193,19 @@ public final class ImparaSuperApp {
  }
 
  public static void openHub(MainActivity a, String selectedText) {
+  Runnable launch = () -> safeRun(a, () -> openHubInternal(a, selectedText));
+  if (a != null && a.root != null) a.root.post(launch);
+  else launch.run();
+ }
+
+ private static void openHubInternal(MainActivity a, String selectedText) {
   recordActivity(a, 5);
-  int xp = a.prefs.getInt(XP_KEY, 0);
-  int streak = a.prefs.getInt(STREAK_KEY, 1);
-  String level = a.prefs.getString(LEVEL_KEY, "A2");
-  int themeIdx = a.prefs.getInt(THEME_KEY, 0);
+  int xp = a.prefs != null ? a.prefs.getInt(XP_KEY, 0) : 0;
+  int streak = a.prefs != null ? a.prefs.getInt(STREAK_KEY, 1) : 1;
+  String level = a.prefs != null ? a.prefs.getString(LEVEL_KEY, "A2") : "A2";
+  int themeIdx = a.prefs != null ? a.prefs.getInt(THEME_KEY, 0) : 0;
   String themeName = THEME_NAMES[Math.max(0, Math.min(themeIdx, THEME_NAMES.length - 1))];
-  String style = a.prefs.getString(STYLE_KEY, "Profesora atractiva y cercana");
+  String style = a.prefs != null ? a.prefs.getString(STYLE_KEY, "Profesora atractiva y cercana") : "Profesora atractiva y cercana";
 
   ScrollView scroll = new ScrollView(a);
   scroll.setVerticalScrollBarEnabled(false);
@@ -183,73 +214,77 @@ public final class ImparaSuperApp {
   final AlertDialog[] holder = new AlertDialog[1];
   Runnable dismiss = () -> { if (holder[0] != null && holder[0].isShowing()) holder[0].dismiss(); };
 
-  LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
-  gap.setMargins(0, 0, 0, a.dp(7));
-
-  // Tarjeta fija: Reto Diario + Palabra del Día
-  LinearLayout.LayoutParams dailyLp = new LinearLayout.LayoutParams(-1, -2);
-  dailyLp.setMargins(0, 0, 0, a.dp(10));
-  root.addView(ImparaExtras.buildDailyWordCard(a, dismiss), dailyLp);
+  // Tarjeta fija: Reto Diario + Palabra del Día (aislada contra cualquier fallo)
+  try {
+   View dailyCard = ImparaExtras.buildDailyWordCard(a, dismiss);
+   if (dailyCard != null) root.addView(dailyCard, rowGap(a, 10));
+  } catch (Throwable t) {
+   TextView warn = new TextView(a);
+   warn.setText("Aviso tarjeta diaria: " + t.getClass().getSimpleName());
+   warn.setTextColor(muted(a));
+   warn.setTextSize(11);
+   root.addView(warn, rowGap(a, 8));
+  }
 
   root.addView(buildOptionRow(a, "📚", "Conjugador de 50 verbos", "Presente, Passato, Imperfetto, Futuro + audio", () -> {
    dismiss.run(); ImparaExtras.openVerbConjugator(a);
-  }), gap);
+  }), rowGap(a, 7));
 
   root.addView(buildOptionRow(a, "🚨", "Falsos Amigos (ES vs. IT)", "Burro, salire, caldo, subito + mini-quiz", () -> {
    dismiss.run(); ImparaExtras.openFalseFriends(a);
-  }), gap);
+  }), rowGap(a, 7));
 
   root.addView(buildOptionRow(a, "🎧", "Modo Shadowing (Acento)", "Normal (1.0x) → pausa → lento (0.75x)", () -> {
    dismiss.run(); ImparaExtras.openShadowing(a, selectedText);
-  }), gap);
+  }), rowGap(a, 7));
 
   root.addView(buildOptionRow(a, "🎚️", "Nivel de Sofía (" + level + ")", "Ajusta entre A1, A2, B1 y B2", () -> {
    dismiss.run(); chooseLevel(a);
-  }), gap);
+  }), rowGap(a, 7));
 
   root.addView(buildOptionRow(a, "✍️", "Corrector de italiano", "Analiza gramática y versión nativa", () -> {
    dismiss.run(); correctPhrase(a, selectedText);
-  }), gap);
+  }), rowGap(a, 7));
 
   root.addView(buildOptionRow(a, "🎭", "Escenarios y simulador", "Roleplay real o prueba con nota 1-100", () -> {
    dismiss.run(); openRoleplay(a);
-  }), gap);
+  }), rowGap(a, 7));
 
   root.addView(buildOptionRow(a, "🃏", "Flashcards offline", "Guarda frases y repasa con audio", () -> {
    dismiss.run(); openFlashcards(a, selectedText);
-  }), gap);
+  }), rowGap(a, 7));
 
   root.addView(buildOptionRow(a, "⚡", "Frases rápidas (1 toque)", "Reproduce frases esenciales al instante", () -> {
    dismiss.run(); openQuickPhrases(a);
-  }), gap);
+  }), rowGap(a, 7));
 
   root.addView(buildOptionRow(a, "🌐", "Modo intérprete (ES ↔ IT)", "Traduce y habla al instante", () -> {
    dismiss.run(); openInterpreter(a, selectedText);
-  }), gap);
+  }), rowGap(a, 7));
 
   root.addView(buildOptionRow(a, "🗣️", "Jerga y modismos reales", "Boh, magari, ci sta, figurati...", () -> {
    dismiss.run(); openSlang(a);
-  }), gap);
+  }), rowGap(a, 7));
 
   root.addView(buildOptionRow(a, "🎮", "Mini-juego de agilidad", "Quiz rápido offline de preposiciones", () -> {
    dismiss.run(); openMiniGame(a, 0, 0);
-  }), gap);
+  }), rowGap(a, 7));
 
   root.addView(buildOptionRow(a, "📖", "Historia interactiva", "Cuento en italiano + 3 preguntas", () -> {
    dismiss.run(); openStoryMode(a);
-  }), gap);
+  }), rowGap(a, 7));
 
   root.addView(buildOptionRow(a, "🎨", "Tema visual (" + themeName + ")", "Noche Azul, Espresso, Verde Italia, AMOLED", () -> {
    dismiss.run(); chooseTheme(a);
-  }), gap);
+  }), rowGap(a, 7));
 
   root.addView(buildOptionRow(a, "👗", "Estilo de Sofía", "Actual: " + style, () -> {
    dismiss.run(); chooseSofiaStyle(a);
-  }), gap);
+  }), rowGap(a, 7));
 
   root.addView(buildOptionRow(a, "💾", "Respaldo de progreso (JSON)", "Exportar o importar flashcards, XP e historial", () -> {
    dismiss.run(); ImparaExtras.openBackupDialog(a);
-  }), new LinearLayout.LayoutParams(-1, -2));
+  }), rowGap(a, 0));
 
   scroll.addView(root);
   AlertDialog dialog = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
@@ -275,8 +310,6 @@ public final class ImparaSuperApp {
   ScrollView scroll = new ScrollView(a);
   LinearLayout root = dialogHeader(a, "SELECTOR DE NIVEL", "Nivel de Sofía");
   final AlertDialog[] holder = new AlertDialog[1];
-  LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
-  gap.setMargins(0, 0, 0, a.dp(7));
 
   for (int i = 0; i < lvls.length; i++) {
    final int idx = i;
@@ -285,7 +318,7 @@ public final class ImparaSuperApp {
     a.prefs.edit().putString(LEVEL_KEY, lvls[idx]).apply();
     a.toast("Nivel activado: " + lvls[idx]);
     a.ask(prompts[idx]);
-   }), gap);
+   }), rowGap(a, 7));
   }
   scroll.addView(root);
   AlertDialog d = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
@@ -303,8 +336,6 @@ public final class ImparaSuperApp {
   ScrollView scroll = new ScrollView(a);
   LinearLayout root = dialogHeader(a, "APARIENCIA", "Elige un tema visual");
   final AlertDialog[] holder = new AlertDialog[1];
-  LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
-  gap.setMargins(0, 0, 0, a.dp(7));
 
   for (int i = 0; i < THEME_NAMES.length; i++) {
    final int idx = i;
@@ -313,7 +344,7 @@ public final class ImparaSuperApp {
     a.prefs.edit().putInt(THEME_KEY, idx).apply();
     if (a.chat != null) a.chat.setBackgroundColor(THEMES[idx][0]);
     a.toast("Tema aplicado: " + THEME_NAMES[idx]);
-   }), gap);
+   }), rowGap(a, 7));
   }
   scroll.addView(root);
   AlertDialog d = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
@@ -353,8 +384,6 @@ public final class ImparaSuperApp {
   ScrollView scroll = new ScrollView(a);
   LinearLayout root = dialogHeader(a, "ROLEPLAY OFFLINE", "Elige un escenario");
   final AlertDialog[] holder = new AlertDialog[1];
-  LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
-  gap.setMargins(0, 0, 0, a.dp(7));
 
   for (int i = 0; i < titles.length; i++) {
    final int idx = i;
@@ -362,7 +391,7 @@ public final class ImparaSuperApp {
     if (holder[0] != null) holder[0].dismiss();
     recordActivity(a, 10);
     a.ask(prompts[idx]);
-   }), gap);
+   }), rowGap(a, 7));
   }
   scroll.addView(root);
   AlertDialog dialog = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
@@ -377,13 +406,11 @@ public final class ImparaSuperApp {
    LinearLayout root = dialogHeader(a, "CUADERNO OFFLINE", "Flashcards (" + cards.length() + ")");
    final AlertDialog[] holder = new AlertDialog[1];
    Runnable dismiss = () -> { if (holder[0] != null) holder[0].dismiss(); };
-   LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
-   gap.setMargins(0, 0, 0, a.dp(7));
 
    root.addView(buildOptionRow(a, "➕", "Guardar frase actual", "Añadir a tus tarjetas de repaso", () -> {
     dismiss.run();
     saveFlashcardDirect(a, !TextUtils.isEmpty(currentPhrase) ? currentPhrase : "Ciao! Come stai oggi?");
-   }), gap);
+   }), rowGap(a, 7));
 
    for (int i = cards.length() - 1; i >= 0; i--) {
     final int idx = i;
@@ -406,7 +433,7 @@ public final class ImparaSuperApp {
       })
       .create();
      styleDialogWindow(a, d2, box);
-    }), gap);
+    }), rowGap(a, 7));
    }
    scroll.addView(root);
    AlertDialog dialog = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
@@ -423,15 +450,13 @@ public final class ImparaSuperApp {
 
   ScrollView scroll = new ScrollView(a);
   LinearLayout root = dialogHeader(a, "AUDIO INMEDIATO", "Frases rápidas (1 toque)");
-  LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
-  gap.setMargins(0, 0, 0, a.dp(7));
 
   for (int i = 0; i < it.length; i++) {
    final int idx = i;
    root.addView(buildOptionRow(a, "🔊", it[i], es[i], () -> {
     recordActivity(a, 5);
     a.speak(it[idx], 0, 1.0f);
-   }), gap);
+   }), rowGap(a, 7));
   }
   scroll.addView(root);
   styleDialogWindow(a, new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create(), scroll);
@@ -465,15 +490,13 @@ public final class ImparaSuperApp {
 
   ScrollView scroll = new ScrollView(a);
   LinearLayout root = dialogHeader(a, "ITALIANO REAL", "Jerga y modismos");
-  LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
-  gap.setMargins(0, 0, 0, a.dp(7));
 
   for (int i = 0; i < terms.length; i++) {
    final int idx = i;
    root.addView(buildOptionRow(a, "🗣️", terms[i], defs[i], () -> {
     recordActivity(a, 5);
     a.speak(terms[idx], 0, 0.9f);
-   }), gap);
+   }), rowGap(a, 7));
   }
   scroll.addView(root);
   styleDialogWindow(a, new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create(), scroll);
@@ -503,8 +526,6 @@ public final class ImparaSuperApp {
 
   LinearLayout root = dialogHeader(a, "RETO " + (qIdx + 1) + "/" + qs.length, q[0]);
   final AlertDialog[] holder = new AlertDialog[1];
-  LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
-  gap.setMargins(0, 0, 0, a.dp(7));
 
   for (String opt : opts) {
    root.addView(buildOptionRow(a, "🎯", opt, "Toca para responder", () -> {
@@ -512,7 +533,7 @@ public final class ImparaSuperApp {
     boolean ok = opt.equals(q[1]);
     a.toast(ok ? "✅ ¡Correcto!" : "❌ Era: " + q[1]);
     openMiniGame(a, qIdx + 1, score + (ok ? 1 : 0));
-   }), gap);
+   }), rowGap(a, 7));
   }
   AlertDialog dialog = new AlertDialog.Builder(a).setNegativeButton("Salir", null).create();
   holder[0] = dialog;
@@ -524,15 +545,13 @@ public final class ImparaSuperApp {
   ScrollView scroll = new ScrollView(a);
   LinearLayout root = dialogHeader(a, "HISTORIA INTERACTIVA", "Elige un tema");
   final AlertDialog[] holder = new AlertDialog[1];
-  LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
-  gap.setMargins(0, 0, 0, a.dp(7));
 
   for (String g : genres) {
    root.addView(buildOptionRow(a, "📖", g, "Cuento corto + 3 preguntas", () -> {
     if (holder[0] != null) holder[0].dismiss();
     recordActivity(a, 15);
     a.ask("Raccontami una storia breve e coinvolgente in italiano sul tema '" + g + "' e alla fine fammi 3 domande di comprensione.");
-   }), gap);
+   }), rowGap(a, 7));
   }
   scroll.addView(root);
   AlertDialog dialog = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
@@ -552,8 +571,6 @@ public final class ImparaSuperApp {
   ScrollView scroll = new ScrollView(a);
   LinearLayout root = dialogHeader(a, "PERSONALIDAD DE SOFÍA", "Elige su estilo");
   final AlertDialog[] holder = new AlertDialog[1];
-  LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
-  gap.setMargins(0, 0, 0, a.dp(7));
 
   for (int i = 0; i < styles.length; i++) {
    final int idx = i;
@@ -562,7 +579,7 @@ public final class ImparaSuperApp {
     a.prefs.edit().putString(STYLE_KEY, styles[idx]).apply();
     a.toast("Estilo activado: " + styles[idx]);
     a.ask(prompts[idx]);
-   }), gap);
+   }), rowGap(a, 7));
   }
   scroll.addView(root);
   AlertDialog dialog = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
