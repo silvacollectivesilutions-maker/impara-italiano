@@ -267,14 +267,19 @@ public final class ChatBubbles {
    lp.setMargins(user ? a.dp(24) : 0, a.dp(4), user ? 0 : a.dp(14), a.dp(4));
    a.chat.addView(bubble, index, lp);
 
+   final Button fAudio = audio;
+   final Button fTranslate = translate;
+   final Button fExplain = explain;
+   final Button fColumns = columns;
+
    if (a.root != null) {
     a.root.post(() -> {
      try {
       ButtonStudio.apply(a);
-      styleMinimalAction(a, audio, "Oír", 44);
-      styleMinimalAction(a, translate, "Traducir", 62);
-      styleMinimalAction(a, explain, "Explicar", 60);
-      styleMinimalAction(a, columns, "Tabla", 50);
+      styleMinimalAction(a, fAudio, "Oír", 44);
+      styleMinimalAction(a, fTranslate, "Traducir", 62);
+      styleMinimalAction(a, fExplain, "Explicar", 60);
+      styleMinimalAction(a, fColumns, "Tabla", 50);
       if (a.root instanceof ViewGroup) {
        compactHints(a, (ViewGroup) a.root);
       }
