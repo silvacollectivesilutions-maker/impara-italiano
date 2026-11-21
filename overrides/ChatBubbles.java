@@ -186,11 +186,17 @@ public final class ChatBubbles {
       }
 
       if (spanishAudio != null) detach(spanishAudio);
-      Button playBtn = DeskUI.button(a, "▶", () -> {
-        try {
-          ImparaSuperApp.speakItalianOnly(a, text.getText().toString(), 1.0f);
-        } catch (Throwable ignored) {}
-      }, false);
+      if (table != null) {
+        detach(table);
+        bubble.addView(table, new LinearLayout.LayoutParams(-1, -2));
+      }
+
+      LinearLayout actions = new LinearLayout(a);
+      actions.setOrientation(LinearLayout.HORIZONTAL);
+      actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+      actions.setPadding(0, a.dp(6), 0, a.dp(2));
+
+      Button playBtn = DeskUI.button(a, "▶", () -> {}, false);
       final Button playFeedback = playBtn;
       playBtn.setOnClickListener(v -> {
         playFeedback.setAlpha(0.45f);
