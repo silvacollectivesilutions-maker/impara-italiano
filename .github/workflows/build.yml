@@ -28,9 +28,6 @@ jobs:
       - name: Descargar APK base y llave fija
         env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
         run: gh release download Base --pattern "*.apk" -D . && (gh release download Base --pattern "impara.jks" -D . || (keytool -genkeypair -v -keystore impara.jks -alias impara -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Impara,O=GermanSilva,C=HN" && gh release upload Base impara.jks))
-      - name: Inspeccionar 10 fotos de fondo
-        run: |
-          python3 -c "import zipfile; z=zipfile.ZipFile('Parlora_5_51.apk'); print('\n'.join([n for n in z.namelist() if any(k in n.lower() for k in ['wall','bg','fondo','backdrop','room','scene','.jpg','.webp'])]))[:2000]"
       - name: Compilar Java
         run: mkdir -p build551/deps build551/appclasses build551/dex && curl -sL -o build551/deps/json.jar https://repo1.maven.org/maven2/org/json/json/20231013/json-20231013.jar && ANDROID_JAR=$(ls -1 "$ANDROID_HOME"/platforms/android-*/android.jar | sort -V | tail -n 1) && find build551/src build551/supportsrc build551/stubs -name "*.java" > build551/java-sources.txt && javac -nowarn -cp "build551/deps/json.jar:$ANDROID_JAR:build551/deps-extra/sherpa-api.jar" -d build551/appclasses @build551/java-sources.txt
       - name: Empaquetar y firmar APK
@@ -44,6 +41,7 @@ jobs:
           from pathlib import Path
           dex = Path("build551/dex/classes.dex").read_bytes()
           custom_glb = Path("overrides/sofia.glb")
+          fondos_dir = Path("overrides/fondos")
           old = zipfile.ZipFile("Parlora_5_51.apk", "r")
           out = zipfile.ZipFile("unsigned.apk", "w")
           for it in old.infolist():
@@ -51,6 +49,8 @@ jobs:
                   continue
               if it.filename == "classes45.dex":
                   out.writestr(zipfile.ZipInfo("classes45.dex"), dex, compress_type=zipfile.ZIP_STORED)
+              elif it.filename.startswith("assets/parlora/scenes546/") and (fondos_dir / Path(it.filename).name).exists():
+                  out.writestr(copy.copy(it), (fondos_dir / Path(it.filename).name).read_bytes())
               elif it.filename == "assets/sofia84/avatar.glb" and custom_glb.exists():
                   out.writestr(copy.copy(it), custom_glb.read_bytes())
               elif it.filename == "assets/sofia84/index.html":
