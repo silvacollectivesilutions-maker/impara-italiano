@@ -14,17 +14,14 @@ jobs:
       - name: Descargar APK base y llave fija
         env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
         run: gh release download Base --pattern "*.apk" -D . && (gh release download Base --pattern "impara.jks" -D . || (keytool -genkeypair -v -keystore impara.jks -alias impara -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Impara,O=GermanSilva,C=HN" && gh release upload Base impara.jks))
-      - name: Inspeccionar CompactSofia y camara 3D
+      - name: Leer camara y fondo en character.js
         run: |
-          echo "=== COMPACTSOFIA.JAVA ==="
-          cat build551/src/com/germansilva/italianomaestro/CompactSofia.java || true
-          echo "=== CODIGO DE SOFIA EN CHARACTER.JS ==="
-          python3 -c "import zipfile; s=zipfile.ZipFile('Parlora_5_51.apk').read('assets/sofia84/character.js').decode('utf-8','ignore'); i=s.find('SofiaCharacter'); print(s[max(0,i-3500):min(len(s),i+3500)] if i>=0 else s[-4000:])"
+          python3 -c "import zipfile,re; s=zipfile.ZipFile('Parlora_5_51.apk').read('assets/sofia84/character.js').decode('utf-8','ignore'); i=s.find('SofiaCharacter'); tail=s[max(0,i-1800):] if i>=0 else s[-3500:]; print(tail[:3500])"
       - name: Compilar Java
         run: mkdir -p build551/deps build551/appclasses build551/dex && curl -sL -o build551/deps/json.jar https://repo1.maven.org/maven2/org/json/json/20231013/json-20231013.jar && ANDROID_JAR=$(ls -1 "$ANDROID_HOME"/platforms/android-*/android.jar | sort -V | tail -n 1) && find build551/src build551/supportsrc build551/stubs -name "*.java" > build551/java-sources.txt && javac -nowarn -cp "build551/deps/json.jar:$ANDROID_JAR:build551/deps-extra/sherpa-api.jar" -d build551/appclasses @build551/java-sources.txt
       - name: Empaquetar y firmar APK
         run: |
-          python3 -c "from pathlib import Path; import zipfile; root=Path('build51'); root=Path('build551'); fam={p.stem for p in (root/'src/com/germansilva/italianomaestro').glob('*.java')}; z=zipfile.ZipFile(root/'release.jar','w'); [z.write(p,str(p.relative_to(root/'appclasses'))) for p in (root/'appclasses').rglob('*.class') if p.stem.split(chr(36))[0] in fam]; z.close()"
+          python3 -c "from pathlib import Path; import zipfile; root=Path('build551'); fam={p.stem for p in (root/'src/com/germansilva/italianomaestro').glob('*.java')}; z=zipfile.ZipFile(root/'release.jar','w'); [z.write(p,str(p.relative_to(root/'appclasses'))) for p in (root/'appclasses').rglob('*.class') if p.stem.split(chr(36))[0] in fam]; z.close()"
           BUILD_TOOLS=$(ls -1d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
           ANDROID_JAR=$(ls -1 "$ANDROID_HOME"/platforms/android-*/android.jar | sort -V | tail -n 1)
           "$BUILD_TOOLS/d8" --min-api 31 --lib "$ANDROID_JAR" --output build551/dex build551/release.jar
