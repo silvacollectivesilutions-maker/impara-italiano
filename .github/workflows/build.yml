@@ -14,9 +14,12 @@ jobs:
       - name: Descargar APK base y llave fija
         env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
         run: gh release download Base --pattern "*.apk" -D . && (gh release download Base --pattern "impara.jks" -D . || (keytool -genkeypair -v -keystore impara.jks -alias impara -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Impara,O=GermanSilva,C=HN" && gh release upload Base impara.jks))
-      - name: Inspeccionar ropa y visor de Sofia
+      - name: Buscar caja de Sofia en Java
         run: |
-          python3 -c "import zipfile,struct,json; z=zipfile.ZipFile('Parlora_5_51.apk'); print('=== INDEX.HTML ==='); print(z.read('assets/sofia84/index.html').decode('utf-8','ignore')); b=z.read('assets/sofia84/avatar.glb'); l=struct.unpack('<I',b[12:16])[0]; g=json.loads(b[20:20+l]); print('=== MATERIALES ==='); print([m.get('name') for m in g.get('materials',[])]); print('=== MALLAS ==='); print([m.get('name') for m in g.get('meshes',[])])"
+          echo "=== DONDE SE CARGA SOFIA84 ==="
+          grep -rn "sofia84" build551/src/com/germansilva/italianomaestro/ || true
+          echo "=== CLASES DE AVATAR / STAGE ==="
+          ls -1 build551/src/com/germansilva/italianomaestro/ | grep -iE "sofia|avatar|stage|web|main" || true
       - name: Compilar Java
         run: mkdir -p build551/deps build551/appclasses build551/dex && curl -sL -o build551/deps/json.jar https://repo1.maven.org/maven2/org/json/json/20231013/json-20231013.jar && ANDROID_JAR=$(ls -1 "$ANDROID_HOME"/platforms/android-*/android.jar | sort -V | tail -n 1) && find build551/src build551/supportsrc build551/stubs -name "*.java" > build551/java-sources.txt && javac -nowarn -cp "build551/deps/json.jar:$ANDROID_JAR:build551/deps-extra/sherpa-api.jar" -d build551/appclasses @build551/java-sources.txt
       - name: Empaquetar y firmar APK
