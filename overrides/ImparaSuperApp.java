@@ -17,6 +17,8 @@ import android.view.*;
 import android.widget.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.json.*;
@@ -44,7 +46,14 @@ public final class ImparaSuperApp {
   private static final String THEME_KEY = "impara_theme_v1";
   private static final String DAILY_DONE_KEY = "impara_daily_done_v1";
 
+  private static final Handler MAIN_UI = new Handler(Looper.getMainLooper());
+  private static final ExecutorService TTS_PREP = Executors.newSingleThreadExecutor();
+  private static volatile long lastSpeakMs = 0L;
+
   private static final Pattern PAREN_PATTERN = Pattern.compile("\\([^()]*\\)");
+  private static final Pattern PUNCT_PATTERN = Pattern.compile("[.,;:!?\"'()\\[\\]«»]");
+  private static final Pattern SPACE_PATTERN = Pattern.compile("\\s+");
+  private static final Pattern EMOJI_PATTERN = Pattern.compile("[\\p{So}\\p{Cn}]");
   private static final String[] SPANISH_WORDS = {
     " que ", " qué ", " cómo ", " como ", " cuál ", " cual ", " quién ", " quien ",
     " por qué ", " porque ", " para ", " pero ", " puedes ", " quieres ", " tienes ",
@@ -201,9 +210,8 @@ public final class ImparaSuperApp {
   static boolean isSpanishLine(String line) {
     if (TextUtils.isEmpty(line)) return false;
     String t = line.trim();
-    String low = " " + t.toLowerCase(Locale.ROOT)
-      .replaceAll("[.,;:!?\"'()\\[\\]«»]", " ")
-      .replaceAll("\\s+", " ") + " ";
+    String noPunct = PUNCT_PATTERN.matcher(t.toLowerCase(Locale.ROOT)).replaceAll(" ");
+    String low = " " + SPACE_PATTERN.matcher(noPunct).replaceAll(" ") + " ";
 
     if (t.contains("¿") || t.contains("¡") || t.contains("ñ") || t.contains("Ñ")
       || t.contains("á") || t.contains("Á") || t.contains("í") || t.contains("Í")
@@ -245,7 +253,7 @@ public final class ImparaSuperApp {
         }
       }
       m.appendTail(sb);
-      clean = sb.toString().replaceAll("[\\p{So}\\p{Cn}]", "").trim();
+      clean = EMOJI_PATTERN.matcher(sb.toString()).replaceAll("").trim();
       if (clean.isEmpty()) continue;
 
       if (!isSpanishLine(clean)) {
@@ -259,12 +267,56 @@ public final class ImparaSuperApp {
   public static void speakItalianOnly(MainActivity a, String raw, float rate) {
     try {
       if (a == null || TextUtils.isEmpty(raw)) return;
-      String it = extractItalianOnly(raw);
-      if (TextUtils.isEmpty(it)) {
-        a.toast("Solo texto en español (Sofía solo pronuncia italiano)");
-        return;
-      }
-      a.speak(it, 0, rate);
+      long now = System.currentTimeMillis();
+      if (now - lastSpeakMs < 650L) return;
+      lastSpeakMs = now;
+
+      TTS_PREP.execute(() -> {
+        try {
+          final String it = extractItalianOnly(raw);
+          MAIN_UI.postDelayed(() -> {
+            try {
+              if (TextUtils.isEmpty(it)) {
+                a.toast("Solo texto en español (Sofía solo pronuncia italiano)");
+                return;
+              }
+              a.speak(it, 0, rate);
+            } catch (Throwable ignored) {}
+          }, 25L);
+        } catch (Throwable ignored) {}
+      });
+    } catch (Throwable ignored) {}
+  }
+
+  public static void startShadowingCycle(MainActivity a, String phrase) {
+    try {
+      long now = System.currentTimeMillis();
+      if (now - lastSpeakMs < 650L) return;
+      lastSpeakMs = now;
+
+      TTS_PREP.execute(() -> {
+        try {
+          final String it = extractItalianOnly(phrase);
+          MAIN_UI.post(() -> {
+            try {
+              if (TextUtils.isEmpty(it)) {
+                a.toast("No hay frase en italiano para practicar");
+                return;
+              }
+              recordActivity(a, 10);
+              a.toast("1/2 Normal — Escucha y repite...");
+              a.speak(it, 0, 1.0f);
+              long pauseMs = Math.max(3600L, Math.min(8500L, it.length() * 110L));
+              MAIN_UI.postDelayed(() -> {
+                try {
+                  a.toast("2/2 Lento (0.75x) — Repite con Sofía");
+                  a.speak(it, 0, 0.75f);
+                } catch (Throwable ignored) {}
+              }, pauseMs);
+            } catch (Throwable ignored) {}
+          });
+        } catch (Throwable ignored) {}
+      });
     } catch (Throwable ignored) {}
   }
 
