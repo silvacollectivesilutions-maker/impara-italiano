@@ -7,6 +7,8 @@ import android.content.Context;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.*;
@@ -15,10 +17,14 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import org.json.*;
 
-/** Burbujas minimalistas: borrar directo, audio 100% italiano, barra de escritura intacta y boton flotante Estudio. */
+/** Burbujas minimalistas optimizadas: sin trabas al cargar chats, borrar directo y audio 100% italiano. */
 public final class ChatBubbles {
   private static final int INK = 0xffffffff;
   private static final String HIST_KEY = "impara_chat_history_v1";
+  private static final Handler UI = new Handler(Looper.getMainLooper());
+  private static final Typeface TF_MED = Typeface.create("sans-serif-medium", Typeface.NORMAL);
+  private static final ArrayList<Runnable> PENDING_FIXES = new ArrayList<>();
+  private static Runnable pendingPolish;
 
   static void detach(View v) {
     if (v != null && v.getParent() instanceof ViewGroup) {
@@ -53,7 +59,7 @@ public final class ChatBubbles {
       b.setMaxLines(1);
       b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
       b.setTextColor(danger ? 0xFFFF8A8A : 0xFFE6F0FA);
-      b.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+      b.setTypeface(TF_MED);
       b.setMinWidth(0);
       b.setMinimumWidth(0);
       b.setMinHeight(0);
@@ -73,13 +79,37 @@ public final class ChatBubbles {
       bg.setStroke(Math.max(1, a.dp(1)), danger ? 0x38FF7070 : 0x22FFFFFF);
       b.setBackground(bg);
 
+      int w = a.dp(30);
+      int h = a.dp(28);
       ViewGroup.LayoutParams lp = b.getLayoutParams();
-      if (lp != null) {
-        lp.width = a.dp(30);
-        lp.height = a.dp(28);
+      if (lp != null && (lp.width != w || lp.height != h)) {
+        lp.width = w;
+        lp.height = h;
         b.setLayoutParams(lp);
       }
     } catch (Throwable ignored) {}
+  }
+
+  private static void schedulePolish(MainActivity a, Runnable fixButtons) {
+    synchronized (PENDING_FIXES) {
+      PENDING_FIXES.add(fixButtons);
+    }
+    if (pendingPolish != null) UI.removeCallbacks(pendingPolish);
+    pendingPolish = () -> {
+      try {
+        ButtonStudio.apply(a);
+        ArrayList<Runnable> batch;
+        synchronized (PENDING_FIXES) {
+          batch = new ArrayList<>(PENDING_FIXES);
+          PENDING_FIXES.clear();
+        }
+        for (Runnable r : batch) {
+          r.run();
+        }
+        ImparaSuperApp.attachStudioFab(a);
+      } catch (Throwable ignored) {}
+    };
+    UI.postDelayed(pendingPolish, 120L);
   }
 
   public static TextView create(MainActivity a, String value, boolean user) {
@@ -155,7 +185,6 @@ public final class ChatBubbles {
         bubble.addView(t, new LinearLayout.LayoutParams(-1, -2));
       }
 
-      // Nunca agregamos spanishAudio para que Sofia no pronuncie mal el espanol
       if (spanishAudio != null) detach(spanishAudio);
       if (audio != null) detach(audio);
 
@@ -164,7 +193,6 @@ public final class ChatBubbles {
         bubble.addView(table, new LinearLayout.LayoutParams(-1, -2));
       }
 
-      // Barra de acciones minimalista y limpia (con Borrar directo en la burbuja)
       LinearLayout actions = new LinearLayout(a);
       actions.setOrientation(LinearLayout.HORIZONTAL);
       actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
@@ -191,7 +219,6 @@ public final class ChatBubbles {
         addIcon(a, actions, saveBtn, "♡", "Guardar", false);
       }
 
-      // Boton de borrar directo en la burbuja
       Button delBtn = DeskUI.button(a, "✕", () -> {
         if (bubble.getParent() instanceof ViewGroup) {
           ((ViewGroup) bubble.getParent()).removeView(bubble);
@@ -223,21 +250,16 @@ public final class ChatBubbles {
       final Button fDel = delBtn;
       final Button fMore = moreBtn;
 
-      if (a.root != null) {
-        a.root.post(() -> {
-          try {
-            ButtonStudio.apply(a);
-            styleActionIcon(a, fPlay, "▶", "Oír italiano", false);
-            styleActionIcon(a, fEdit, "✎", "Editar", false);
-            styleActionIcon(a, fTrans, "⇄", "Traducir", false);
-            styleActionIcon(a, fExp, "✦", "Explicar", false);
-            styleActionIcon(a, fSave, "♡", "Guardar", false);
-            styleActionIcon(a, fDel, "✕", "Borrar", true);
-            styleActionIcon(a, fMore, "⋯", "Más", false);
-            ImparaSuperApp.attachStudioFab(a);
-          } catch (Throwable ignored) {}
-        });
-      }
+      schedulePolish(a, () -> {
+        styleActionIcon(a, fPlay, "▶", "Oír italiano", false);
+        styleActionIcon(a, fEdit, "✎", "Editar", false);
+        styleActionIcon(a, fTrans, "⇄", "Traducir", false);
+        styleActionIcon(a, fExp, "✦", "Explicar", false);
+        styleActionIcon(a, fSave, "♡", "Guardar", false);
+        styleActionIcon(a, fDel, "✕", "Borrar", true);
+        styleActionIcon(a, fMore, "⋯", "Más", false);
+      });
+
       StudyDesk.selection(a, text);
     } catch (Throwable ignored) {}
     return text;
@@ -246,13 +268,12 @@ public final class ChatBubbles {
   private static void addIcon(MainActivity a, LinearLayout row, Button b, String glyph, String desc, boolean danger) {
     if (b == null) return;
     detach(b);
-    styleActionIcon(a, b, glyph, desc, danger);
     LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(a.dp(30), a.dp(28));
     lp.setMarginStart(a.dp(5));
     row.addView(b, lp);
+    styleActionIcon(a, b, glyph, desc, danger);
   }
 
-  /** Mini-menu moderno en cuadricula 2x3 solo para acciones del mensaje. */
   private static void showCompactBubbleMenu(MainActivity a, LinearLayout bubble, TextView text, boolean user, Button columnsBtn) {
     String msg = text.getText().toString();
     LinearLayout root = ImparaSuperApp.dialogHeader(a,
@@ -423,7 +444,7 @@ public final class ChatBubbles {
 
   static void add(MainActivity a, LinearLayout row, Button b, int width, String label, int icon) {
     detach(b);
-    styleActionIcon(a, b, label, label, false);
     row.addView(b, new LinearLayout.LayoutParams(a.dp(width > 0 ? width : 30), a.dp(28)));
+    styleActionIcon(a, b, label, label, false);
   }
 }
