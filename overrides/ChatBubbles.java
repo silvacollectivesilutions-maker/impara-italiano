@@ -15,548 +15,415 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import org.json.*;
 
-/** Burbujas del chat con iconos limpios y modernos, pistas compactas y control de audio. */
+/** Burbujas minimalistas: borrar directo, audio 100% italiano, barra de escritura intacta y boton flotante Estudio. */
 public final class ChatBubbles {
- private static final int INK = 0xffffffff;
- private static final String HIST_KEY = "impara_chat_history_v1";
+  private static final int INK = 0xffffffff;
+  private static final String HIST_KEY = "impara_chat_history_v1";
 
- static void detach(View v) {
-  if (v != null && v.getParent() instanceof ViewGroup) {
-   ((ViewGroup) v.getParent()).removeView(v);
-  }
- }
-
- static ArrayList<View> children(ViewGroup g) {
-  ArrayList<View> r = new ArrayList<>();
-  for (int i = 0; i < g.getChildCount(); i++) {
-   r.add(g.getChildAt(i));
-  }
-  return r;
- }
-
- static void buttons(View v, View table, List<Button> out) {
-  if (v == table) return;
-  if (v instanceof Button) {
-   out.add((Button) v);
-  } else if (v instanceof ViewGroup) {
-   for (View c : children((ViewGroup) v)) {
-    buttons(c, table, out);
-   }
-  }
- }
-
- /** Detecta si una cadena contiene palabras clave típicas en español. */
- private static boolean looksLikeSpanish(String s) {
-  if (TextUtils.isEmpty(s)) return false;
-  String low = s.toLowerCase(Locale.ROOT);
-  return low.contains("¿") || low.contains("¡") || low.contains("ñ")
-   || low.contains(" pronunc") || low.contains(" español") || low.contains(" espanol")
-   || low.contains(" no sé ") || low.contains(" no se ") || low.contains(" cómo ") || low.contains(" como ");
- }
-
- /** Estiliza un botón con apariencia moderna, limpia y sin cajas pesadas. */
- private static void styleModernIconButton(MainActivity a, Button b, String glyph, String desc, int widthDp) {
-  try {
-   if (b == null) return;
-   b.setAllCaps(false);
-   b.setSingleLine(true);
-   b.setMaxLines(1);
-   b.setEllipsize(TextUtils.TruncateAt.END);
-   b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
-   b.setTextColor(0xFFEAF2FC);
-   b.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-   b.setMinWidth(0);
-   b.setMinimumWidth(0);
-   b.setMinHeight(0);
-   b.setMinimumHeight(0);
-   b.setPadding(a.dp(4), a.dp(2), a.dp(4), a.dp(2));
-   b.setGravity(Gravity.CENTER);
-
-   if (!TextUtils.isEmpty(glyph)) {
-    b.setText(glyph);
-   }
-   if (!TextUtils.isEmpty(desc)) {
-    b.setContentDescription(desc);
-   }
-
-   GradientDrawable bg = new GradientDrawable();
-   bg.setShape(GradientDrawable.RECTANGLE);
-   bg.setColor(0x16FFFFFF);
-   bg.setCornerRadius(a.dp(999));
-   bg.setStroke(Math.max(1, a.dp(1)), 0x24FFFFFF);
-   b.setBackground(bg);
-
-   // Ocultar drawables heredados grandes para dejar el icono moderno limpio
-   b.setCompoundDrawables(null, null, null, null);
-   b.setCompoundDrawablePadding(0);
-
-   ViewGroup.LayoutParams lp = b.getLayoutParams();
-   if (lp != null && widthDp > 0) {
-    lp.width = a.dp(widthDp);
-    lp.height = a.dp(28);
-    b.setLayoutParams(lp);
-   }
-  } catch (Throwable ignored) {}
- }
-
- /** Compacta y ordena las tarjetas de "Pistas" para que se vean pequeñas y bien acomodadas. */
- private static void compactHints(MainActivity a, ViewGroup root) {
-  try {
-   if (root == null) return;
-   for (int i = 0; i < root.getChildCount(); i++) {
-    View child = root.getChildAt(i);
-    if (child instanceof ViewGroup) {
-     ViewGroup vg = (ViewGroup) child;
-     if (vg instanceof LinearLayout && ((LinearLayout) vg).getOrientation() == LinearLayout.HORIZONTAL) {
-      int items = 0;
-      for (int j = 0; j < vg.getChildCount(); j++) {
-       if (vg.getChildAt(j) instanceof Button || vg.getChildAt(j) instanceof TextView) {
-        items++;
-       }
-      }
-      if (items >= 2) {
-       vg.setPadding(a.dp(4), a.dp(2), a.dp(4), a.dp(2));
-       for (int j = 0; j < vg.getChildCount(); j++) {
-        View item = vg.getChildAt(j);
-        ViewGroup.LayoutParams itemLp = item.getLayoutParams();
-        if (itemLp instanceof ViewGroup.MarginLayoutParams) {
-         ViewGroup.MarginLayoutParams mlp = (ViewGroup.MarginLayoutParams) itemLp;
-         mlp.setMargins(a.dp(3), a.dp(1), a.dp(3), a.dp(1));
-         if (mlp.height > a.dp(46) || mlp.height == ViewGroup.LayoutParams.MATCH_PARENT) {
-          mlp.height = ViewGroup.LayoutParams.WRAP_CONTENT;
-         }
-         item.setLayoutParams(mlp);
-        }
-        item.setMinimumHeight(0);
-        item.setPadding(a.dp(8), a.dp(4), a.dp(8), a.dp(4));
-        if (item instanceof TextView) {
-         TextView tv = (TextView) item;
-         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
-         tv.setMaxLines(2);
-         tv.setEllipsize(TextUtils.TruncateAt.END);
-         tv.setLineSpacing(a.dp(1f), 1f);
-         GradientDrawable pill = new GradientDrawable();
-         pill.setShape(GradientDrawable.RECTANGLE);
-         pill.setColor(0xFF14243A);
-         pill.setCornerRadius(a.dp(10));
-         pill.setStroke(Math.max(1, a.dp(1)), 0x2E7CC4FF);
-         tv.setBackground(pill);
-        }
-       }
-      }
-     }
-     compactHints(a, vg);
+  static void detach(View v) {
+    if (v != null && v.getParent() instanceof ViewGroup) {
+      ((ViewGroup) v.getParent()).removeView(v);
     }
-   }
-  } catch (Throwable ignored) {}
- }
-
- /** Reproduce audio evitando leer en español cuando se indica que no sabe pronunciar o cuando el texto está en italiano. */
- private static void speakSafeWithoutForcedSpanish(MainActivity a, String content, float rate) {
-  try {
-   if (a == null || TextUtils.isEmpty(content)) return;
-   String clean = content.trim();
-   if (looksLikeSpanish(clean) && (clean.toLowerCase(Locale.ROOT).contains("pronunc") || clean.toLowerCase(Locale.ROOT).contains("no sé") || clean.toLowerCase(Locale.ROOT).contains("no se"))) {
-    a.toast("Audio en español omitido");
-    return;
-   }
-   a.speak(clean, 0, rate);
-  } catch (Throwable ignored) {}
- }
-
- public static TextView create(MainActivity a, String value, boolean user) {
-  if (user) {
-   try {
-    MoreCards546.user(a, value);
-    ImparaSuperApp.recordActivity(a, 5);
-   } catch (Throwable ignored) {}
   }
 
-  TextView text = a.legacyMessage(value, user);
-  if (a.page != 1 || a.chat == null) return text;
-
-  try {
-   View old = text;
-   while (old.getParent() instanceof View && old.getParent() != a.chat) {
-    old = (View) old.getParent();
-   }
-   if (old.getParent() != a.chat || !(old instanceof ViewGroup)) return text;
-
-   int index = a.chat.indexOfChild(old);
-   View table = old.findViewWithTag("study-columns");
-   ArrayList<Button> all = new ArrayList<>();
-   buttons(old, table, all);
-
-   Button audio = null, translate = null, explain = null, columns = null, spanishAudio = null;
-   for (Button b : all) {
-    String d = String.valueOf(b.getContentDescription());
-    String label = b.getText().toString();
-    if (d.contains("columnas")) columns = b;
-    else if (d.contains("traducción")) translate = b;
-    else if (d.contains("español") && d.contains("Escuchar")) spanishAudio = b;
-    else if (b.getTag() == text || d.contains("Paola") || d.contains("Escuchar o detener")) audio = b;
-    else if (label.contains("Explicar") || label.contains("significado") || label.contains("Rayos X")) explain = b;
-   }
-
-   ArrayList<TextView> translations = new ArrayList<>();
-   for (View v : children((ViewGroup) old)) {
-    if (v instanceof TextView && !(v instanceof Button) && v != text) {
-     translations.add((TextView) v);
+  static ArrayList<View> children(ViewGroup g) {
+    ArrayList<View> r = new ArrayList<>();
+    for (int i = 0; i < g.getChildCount(); i++) {
+      r.add(g.getChildAt(i));
     }
-   }
+    return r;
+  }
 
-   LinearLayout bubble = new LinearLayout(a);
-   bubble.setOrientation(LinearLayout.VERTICAL);
-   bubble.setPadding(a.dp(11), a.dp(9), a.dp(11), a.dp(5));
-   bubble.setBackground(new WallStyle.Bubble(a, user));
-   bubble.setTag(0x7e002602, user);
-   bubble.setOnLongClickListener(v -> {
-    showMessageMenu(a, bubble, text, user);
-    return true;
-   });
-
-   LinearLayout body = new LinearLayout(a);
-   body.setOrientation(LinearLayout.VERTICAL);
-   detach(text);
-   text.setTag(0x7e002601, true);
-   text.setTextColor(a.prefs.getInt("chat_text_color", INK));
-   text.setTextSize(TypedValue.COMPLEX_UNIT_SP, a.prefs.getInt("chat_text_size", 16));
-   text.setIncludeFontPadding(false);
-   text.setPadding(0, 0, 0, 0);
-   text.setLineSpacing(a.dp(3), 1f);
-   body.addView(text, new LinearLayout.LayoutParams(-1, -2));
-   bubble.addView(body, new LinearLayout.LayoutParams(-1, -2));
-
-   for (TextView t : translations) {
-    detach(t);
-    t.setTag(0x7e002601, true);
-    t.setTextColor(a.prefs.getInt("chat_text_color", INK));
-    t.setPadding(a.dp(7), a.dp(6), a.dp(7), a.dp(6));
-    SofiaGlass.surface(a, t, 10, false, 0, false);
-    bubble.addView(t, new LinearLayout.LayoutParams(-1, -2));
-   }
-
-   if (spanishAudio != null) {
-    detach(spanishAudio);
-    styleModernIconButton(a, spanishAudio, "♪", "Audio", 32);
-    LinearLayout.LayoutParams spLp = new LinearLayout.LayoutParams(a.dp(32), a.dp(26));
-    spLp.topMargin = a.dp(4);
-    bubble.addView(spanishAudio, spLp);
-   }
-
-   if (table != null) {
-    detach(table);
-    bubble.addView(table, new LinearLayout.LayoutParams(-1, -2));
-   }
-
-   // Barra inferior con iconos modernos limpios
-   LinearLayout actions = new LinearLayout(a);
-   actions.setOrientation(LinearLayout.HORIZONTAL);
-   actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-   actions.setPadding(0, a.dp(5), 0, a.dp(1));
-
-   if (audio != null) addIconAction(a, actions, audio, "▶", "Escuchar", 32);
-   if (translate != null) addIconAction(a, actions, translate, "⇄", "Traducir", 32);
-   if (explain != null) addIconAction(a, actions, explain, "✦", "Explicar", 32);
-   if (columns != null) addIconAction(a, actions, columns, "⊞", "Tabla", 32);
-
-   Button shareButton = DeskUI.button(a, "↗", () -> ShareHub549.reply(a, text), false);
-   addIconAction(a, actions, shareButton, "↗", "Compartir", 32);
-
-   Button saveButton = DeskUI.button(a, "♡", () -> ImparaSuperApp.saveFlashcardDirect(a, text.getText().toString()), false);
-   addIconAction(a, actions, saveButton, "♡", "Guardar", 32);
-
-   Button menuButton = DeskUI.button(a, "•••", () -> showMessageMenu(a, bubble, text, user), false);
-   addIconAction(a, actions, menuButton, "•••", "Opciones", 34);
-
-   HorizontalScrollView strip = new HorizontalScrollView(a);
-   strip.setHorizontalScrollBarEnabled(false);
-   strip.setFillViewport(false);
-   strip.setClipToPadding(false);
-   strip.addView(actions, new ViewGroup.LayoutParams(-2, -2));
-   bubble.addView(strip, new LinearLayout.LayoutParams(-1, -2));
-
-   a.chat.removeView(old);
-   LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-   lp.setMargins(user ? a.dp(24) : 0, a.dp(4), user ? 0 : a.dp(14), a.dp(4));
-   a.chat.addView(bubble, index, lp);
-
-   final Button fAudio = audio;
-   final Button fTranslate = translate;
-   final Button fExplain = explain;
-   final Button fColumns = columns;
-
-   if (a.root != null) {
-    a.root.post(() -> {
-     try {
-      ButtonStudio.apply(a);
-      styleModernIconButton(a, fAudio, "▶", "Escuchar", 32);
-      styleModernIconButton(a, fTranslate, "⇄", "Traducir", 32);
-      styleModernIconButton(a, fExplain, "✦", "Explicar", 32);
-      styleModernIconButton(a, fColumns, "⊞", "Tabla", 32);
-      if (a.root instanceof ViewGroup) {
-       compactHints(a, (ViewGroup) a.root);
+  static void buttons(View v, View table, List<Button> out) {
+    if (v == table) return;
+    if (v instanceof Button) {
+      out.add((Button) v);
+    } else if (v instanceof ViewGroup) {
+      for (View c : children((ViewGroup) v)) {
+        buttons(c, table, out);
       }
-     } catch (Throwable ignored) {}
+    }
+  }
+
+  private static void styleActionIcon(MainActivity a, Button b, String glyph, String desc, boolean danger) {
+    try {
+      if (b == null) return;
+      b.setAllCaps(false);
+      b.setSingleLine(true);
+      b.setMaxLines(1);
+      b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+      b.setTextColor(danger ? 0xFFFF8A8A : 0xFFE6F0FA);
+      b.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+      b.setMinWidth(0);
+      b.setMinimumWidth(0);
+      b.setMinHeight(0);
+      b.setMinimumHeight(0);
+      b.setPadding(0, 0, 0, 0);
+      b.setGravity(Gravity.CENTER);
+      b.setCompoundDrawables(null, null, null, null);
+      b.setCompoundDrawablesRelative(null, null, null, null);
+      b.setCompoundDrawablePadding(0);
+      if (!TextUtils.isEmpty(glyph)) b.setText(glyph);
+      if (!TextUtils.isEmpty(desc)) b.setContentDescription(desc);
+
+      GradientDrawable bg = new GradientDrawable();
+      bg.setShape(GradientDrawable.RECTANGLE);
+      bg.setColor(danger ? 0x22FF5C5C : 0x1AFFFFFF);
+      bg.setCornerRadius(a.dp(999));
+      bg.setStroke(Math.max(1, a.dp(1)), danger ? 0x38FF7070 : 0x22FFFFFF);
+      b.setBackground(bg);
+
+      ViewGroup.LayoutParams lp = b.getLayoutParams();
+      if (lp != null) {
+        lp.width = a.dp(30);
+        lp.height = a.dp(28);
+        b.setLayoutParams(lp);
+      }
+    } catch (Throwable ignored) {}
+  }
+
+  public static TextView create(MainActivity a, String value, boolean user) {
+    if (user) {
+      try {
+        MoreCards546.user(a, value);
+        ImparaSuperApp.recordActivity(a, 5);
+      } catch (Throwable ignored) {}
+    }
+
+    TextView text = a.legacyMessage(value, user);
+    if (a.page != 1 || a.chat == null) return text;
+
+    try {
+      View old = text;
+      while (old.getParent() instanceof View && old.getParent() != a.chat) {
+        old = (View) old.getParent();
+      }
+      if (old.getParent() != a.chat || !(old instanceof ViewGroup)) return text;
+
+      int index = a.chat.indexOfChild(old);
+      View table = old.findViewWithTag("study-columns");
+      ArrayList<Button> all = new ArrayList<>();
+      buttons(old, table, all);
+
+      Button audio = null, translate = null, explain = null, columns = null, spanishAudio = null;
+      for (Button b : all) {
+        String d = String.valueOf(b.getContentDescription());
+        String label = b.getText().toString();
+        if (d.contains("columnas")) columns = b;
+        else if (d.contains("traducción")) translate = b;
+        else if (d.contains("español") && d.contains("Escuchar")) spanishAudio = b;
+        else if (b.getTag() == text || d.contains("Paola") || d.contains("Escuchar o detener")) audio = b;
+        else if (label.contains("Explicar") || label.contains("significado") || label.contains("Rayos X")) explain = b;
+      }
+
+      ArrayList<TextView> translations = new ArrayList<>();
+      for (View v : children((ViewGroup) old)) {
+        if (v instanceof TextView && !(v instanceof Button) && v != text) {
+          translations.add((TextView) v);
+        }
+      }
+
+      LinearLayout bubble = new LinearLayout(a);
+      bubble.setOrientation(LinearLayout.VERTICAL);
+      bubble.setPadding(a.dp(12), a.dp(10), a.dp(12), a.dp(6));
+      bubble.setBackground(new WallStyle.Bubble(a, user));
+      bubble.setTag(0x7e002602, user);
+      final Button fColumnsRef = columns;
+      bubble.setOnLongClickListener(v -> {
+        showCompactBubbleMenu(a, bubble, text, user, fColumnsRef);
+        return true;
+      });
+
+      LinearLayout body = new LinearLayout(a);
+      body.setOrientation(LinearLayout.VERTICAL);
+      detach(text);
+      text.setTag(0x7e002601, true);
+      text.setTextColor(a.prefs.getInt("chat_text_color", INK));
+      text.setTextSize(TypedValue.COMPLEX_UNIT_SP, a.prefs.getInt("chat_text_size", 15.5f));
+      text.setIncludeFontPadding(false);
+      text.setPadding(0, 0, 0, 0);
+      text.setLineSpacing(a.dp(3), 1f);
+      body.addView(text, new LinearLayout.LayoutParams(-1, -2));
+      bubble.addView(body, new LinearLayout.LayoutParams(-1, -2));
+
+      for (TextView t : translations) {
+        detach(t);
+        t.setTag(0x7e002601, true);
+        t.setTextColor(a.prefs.getInt("chat_text_color", INK));
+        t.setPadding(a.dp(8), a.dp(6), a.dp(8), a.dp(6));
+        SofiaGlass.surface(a, t, 10, false, 0, false);
+        bubble.addView(t, new LinearLayout.LayoutParams(-1, -2));
+      }
+
+      // Nunca agregamos spanishAudio para que Sofia no pronuncie mal el espanol
+      if (spanishAudio != null) detach(spanishAudio);
+      if (audio != null) detach(audio);
+
+      if (table != null) {
+        detach(table);
+        bubble.addView(table, new LinearLayout.LayoutParams(-1, -2));
+      }
+
+      // Barra de acciones minimalista y limpia (con Borrar directo en la burbuja)
+      LinearLayout actions = new LinearLayout(a);
+      actions.setOrientation(LinearLayout.HORIZONTAL);
+      actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
+      actions.setPadding(0, a.dp(6), 0, a.dp(1));
+
+      Button playBtn = DeskUI.button(a, "▶", () -> ImparaSuperApp.speakItalianOnly(a, text.getText().toString(), 1.0f), false);
+      playBtn.setOnLongClickListener(v -> {
+        ImparaSuperApp.speakItalianOnly(a, text.getText().toString(), 0.75f);
+        a.toast("Lento 0.75x (italiano)");
+        return true;
+      });
+      addIcon(a, actions, playBtn, "▶", "Oír italiano", false);
+
+      Button editBtn = null;
+      Button saveBtn = null;
+
+      if (user) {
+        editBtn = DeskUI.button(a, "✎", () -> editMessage(a, text, true), false);
+        addIcon(a, actions, editBtn, "✎", "Editar", false);
+      } else {
+        if (translate != null) addIcon(a, actions, translate, "⇄", "Traducir", false);
+        if (explain != null) addIcon(a, actions, explain, "✦", "Explicar", false);
+        saveBtn = DeskUI.button(a, "♡", () -> ImparaSuperApp.saveFlashcardDirect(a, text.getText().toString()), false);
+        addIcon(a, actions, saveBtn, "♡", "Guardar", false);
+      }
+
+      // Boton de borrar directo en la burbuja
+      Button delBtn = DeskUI.button(a, "✕", () -> {
+        if (bubble.getParent() instanceof ViewGroup) {
+          ((ViewGroup) bubble.getParent()).removeView(bubble);
+        }
+        a.toast("Mensaje borrado");
+      }, false);
+      addIcon(a, actions, delBtn, "✕", "Borrar", true);
+
+      Button moreBtn = DeskUI.button(a, "⋯", () -> showCompactBubbleMenu(a, bubble, text, user, fColumnsRef), false);
+      addIcon(a, actions, moreBtn, "⋯", "Más", false);
+
+      HorizontalScrollView strip = new HorizontalScrollView(a);
+      strip.setHorizontalScrollBarEnabled(false);
+      strip.setFillViewport(false);
+      strip.setClipToPadding(false);
+      strip.addView(actions, new ViewGroup.LayoutParams(-2, -2));
+      bubble.addView(strip, new LinearLayout.LayoutParams(-1, -2));
+
+      a.chat.removeView(old);
+      LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+      lp.setMargins(user ? a.dp(28) : 0, a.dp(4), user ? 0 : a.dp(16), a.dp(4));
+      a.chat.addView(bubble, index, lp);
+
+      final Button fPlay = playBtn;
+      final Button fEdit = editBtn;
+      final Button fTrans = translate;
+      final Button fExp = explain;
+      final Button fSave = saveBtn;
+      final Button fDel = delBtn;
+      final Button fMore = moreBtn;
+
+      if (a.root != null) {
+        a.root.post(() -> {
+          try {
+            ButtonStudio.apply(a);
+            styleActionIcon(a, fPlay, "▶", "Oír italiano", false);
+            styleActionIcon(a, fEdit, "✎", "Editar", false);
+            styleActionIcon(a, fTrans, "⇄", "Traducir", false);
+            styleActionIcon(a, fExp, "✦", "Explicar", false);
+            styleActionIcon(a, fSave, "♡", "Guardar", false);
+            styleActionIcon(a, fDel, "✕", "Borrar", true);
+            styleActionIcon(a, fMore, "⋯", "Más", false);
+            ImparaSuperApp.attachStudioFab(a);
+          } catch (Throwable ignored) {}
+        });
+      }
+      StudyDesk.selection(a, text);
+    } catch (Throwable ignored) {}
+    return text;
+  }
+
+  private static void addIcon(MainActivity a, LinearLayout row, Button b, String glyph, String desc, boolean danger) {
+    if (b == null) return;
+    detach(b);
+    styleActionIcon(a, b, glyph, desc, danger);
+    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(a.dp(30), a.dp(28));
+    lp.setMarginStart(a.dp(5));
+    row.addView(b, lp);
+  }
+
+  /** Mini-menu moderno en cuadricula 2x3 solo para acciones del mensaje. */
+  private static void showCompactBubbleMenu(MainActivity a, LinearLayout bubble, TextView text, boolean user, Button columnsBtn) {
+    String msg = text.getText().toString();
+    LinearLayout root = ImparaSuperApp.dialogHeader(a,
+      user ? "TU MENSAJE" : "MENSAJE DE SOFÍA",
+      "Acciones rápidas");
+
+    final AlertDialog[] holder = new AlertDialog[1];
+    Runnable dismiss = () -> { if (holder[0] != null && holder[0].isShowing()) holder[0].dismiss(); };
+
+    LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
+    gap.setMargins(0, 0, 0, a.dp(8));
+
+    View tSlow = ImparaSuperApp.buildGridTile(a, "▶", "Lento 0.75x", "Solo italiano despacio", () -> {
+      dismiss.run(); ImparaSuperApp.speakItalianOnly(a, msg, 0.75f);
     });
-   }
-   StudyDesk.selection(a, text);
-  } catch (Throwable ignored) {}
-  return text;
- }
+    View tShad = ImparaSuperApp.buildGridTile(a, "◎", "Shadowing", "Normal y lento", () -> {
+      dismiss.run(); ImparaSuperApp.startShadowingCycle(a, msg);
+    });
+    root.addView(ImparaSuperApp.buildTwoColRow(a, tSlow, tShad), gap);
 
- private static void addIconAction(MainActivity a, LinearLayout row, Button b, String glyph, String desc, int widthDp) {
-  if (b == null) return;
-  detach(b);
-  styleModernIconButton(a, b, glyph, desc, widthDp);
-  LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(a.dp(widthDp), a.dp(28));
-  lp.setMarginStart(a.dp(5));
-  row.addView(b, lp);
- }
-
- private static void showMessageMenu(MainActivity a, LinearLayout bubble, TextView text, boolean user) {
-  String msg = text.getText().toString();
-  ScrollView scroll = new ScrollView(a);
-  scroll.setVerticalScrollBarEnabled(false);
-  LinearLayout root = ImparaSuperApp.dialogHeader(a,
-   "IMPARA L'ITALIANO · " + (user ? "TU MENSAJE" : "SOFÍA"),
-   "Opciones rápidas");
-
-  final AlertDialog[] holder = new AlertDialog[1];
-  Runnable dismiss = () -> {
-   if (holder[0] != null && holder[0].isShowing()) holder[0].dismiss();
-  };
-
-  LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
-  gap.setMargins(0, 0, 0, a.dp(7));
-
-  root.addView(ImparaSuperApp.buildOptionRow(a, "⚡", "Centro Súper App",
-   "50 verbos, falsos amigos, reto diario, nivel, temas y respaldo", () -> {
-    dismiss.run();
-    ImparaSuperApp.openHub(a, msg);
-   }), gap);
-
-  root.addView(ImparaSuperApp.buildOptionRow(a, "🃏", "Guardar directo en Flashcards",
-   "Añade este mensaje a tu mazo con 1 toque (+10 XP)", () -> {
-    dismiss.run();
-    ImparaSuperApp.saveFlashcardDirect(a, msg);
-   }), gap);
-
-  root.addView(ImparaSuperApp.buildOptionRow(a, "🎧", "Practicar Shadowing",
-   "Sofía lo dice normal (1.0x), pausa y lento (0.75x)", () -> {
-    dismiss.run();
-    ImparaExtras.startShadowingCycle(a, msg);
-   }), gap);
-
-  root.addView(ImparaSuperApp.buildOptionRow(a, "🐢", "Escuchar lento (0.75x)",
-   "Repetir pronunciación despacio", () -> {
-    dismiss.run();
-    speakSafeWithoutForcedSpanish(a, msg, 0.75f);
-   }), gap);
-
-  root.addView(ImparaSuperApp.buildOptionRow(a, "✏️", "Editar mensaje",
-   user ? "Corregir o reenviar a Sofía" : "Editar texto en pantalla", () -> {
-    dismiss.run();
-    editMessage(a, text, user);
-   }), gap);
-
-  root.addView(ImparaSuperApp.buildOptionRow(a, "🗑️", "Borrar mensaje",
-   "Quitar esta burbuja del chat", () -> {
-    dismiss.run();
-    if (bubble.getParent() instanceof ViewGroup) {
-     ((ViewGroup) bubble.getParent()).removeView(bubble);
-    }
-    a.toast("Mensaje borrado");
-   }), gap);
-
-  root.addView(ImparaSuperApp.buildOptionRow(a, "📋", "Copiar texto",
-   "Guardar en el portapapeles", () -> {
-    dismiss.run();
-    ClipboardManager cm = (ClipboardManager) a.getSystemService(Context.CLIPBOARD_SERVICE);
-    if (cm != null) {
-     cm.setPrimaryClip(ClipData.newPlainText("Impara l'italiano", msg));
-     a.toast("Texto copiado");
-    }
-   }), gap);
-
-  root.addView(ImparaSuperApp.buildOptionRow(a, "🗂️", "Historial de conversaciones",
-   "Guardar, abrir o eliminar sesiones", () -> {
-    dismiss.run();
-    showHistoryDialog(a);
-   }), gap);
-
-  root.addView(ImparaSuperApp.buildOptionRow(a, "🎨", "Cambiar color de burbuja",
-   "Personalizar paleta del chat", () -> {
-    dismiss.run();
-    ChatLook542.palette(a, user);
-   }), new LinearLayout.LayoutParams(-1, -2));
-
-  scroll.addView(root);
-  AlertDialog dialog = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
-  holder[0] = dialog;
-  ImparaSuperApp.styleDialogWindow(a, dialog, scroll);
- }
-
- private static void editMessage(MainActivity a, TextView text, boolean user) {
-  LinearLayout box = ImparaSuperApp.dialogHeader(a, "IMPARA L'ITALIANO", "Editar mensaje");
-  EditText et = ImparaSuperApp.styledInput(a, "Escribe tu mensaje...", text.getText().toString());
-  box.addView(et);
-
-  AlertDialog.Builder b = new AlertDialog.Builder(a)
-   .setPositiveButton("Guardar", (d, w) -> {
-    String val = et.getText().toString().trim();
-    if (!val.isEmpty()) {
-     text.setText(val);
-     a.toast("Mensaje editado");
-    }
-   })
-   .setNegativeButton("Cancelar", null);
-
-  if (user) {
-   b.setNeutralButton("Guardar y reenviar", (d, w) -> {
-    String val = et.getText().toString().trim();
-    if (!val.isEmpty()) {
-     text.setText(val);
-     a.ask(val);
-    }
-   });
-  }
-  ImparaSuperApp.styleDialogWindow(a, b.create(), box);
- }
-
- private static void showHistoryDialog(MainActivity a) {
-  try {
-   JSONArray arr = new JSONArray(a.prefs.getString(HIST_KEY, "[]"));
-   ScrollView scroll = new ScrollView(a);
-   LinearLayout root = ImparaSuperApp.dialogHeader(a, "HISTORIAL OFFLINE", "Conversaciones guardadas");
-
-   final AlertDialog[] holder = new AlertDialog[1];
-   Runnable dismiss = () -> {
-    if (holder[0] != null && holder[0].isShowing()) holder[0].dismiss();
-   };
-
-   LinearLayout.LayoutParams gap = new LinearLayout.LayoutParams(-1, -2);
-   gap.setMargins(0, 0, 0, a.dp(7));
-
-   root.addView(ImparaSuperApp.buildOptionRow(a, "➕", "Guardar conversación actual",
-    "Guarda todos los mensajes visibles", () -> {
-     dismiss.run();
-     saveCurrentChat(a);
-    }), gap);
-
-   for (int i = arr.length() - 1; i >= 0; i--) {
-    final int idx = i;
-    JSONObject o = arr.getJSONObject(i);
-    int count = o.optJSONArray("msgs") != null ? o.optJSONArray("msgs").length() : 0;
-    root.addView(ImparaSuperApp.buildOptionRow(a, "💬", o.optString("title", "Sesión"),
-     count + " mensajes", () -> {
+    View tCopy = ImparaSuperApp.buildGridTile(a, "⧉", "Copiar", "Al portapapeles", () -> {
       dismiss.run();
-      openSavedChat(a, idx);
-     }), gap);
-   }
+      ClipboardManager cm = (ClipboardManager) a.getSystemService(Context.CLIPBOARD_SERVICE);
+      if (cm != null) {
+        cm.setPrimaryClip(ClipData.newPlainText("Impara l'italiano", msg));
+        a.toast("Texto copiado");
+      }
+    });
+    View tEdit = ImparaSuperApp.buildGridTile(a, "✎", "Editar", user ? "Corregir o reenviar" : "Editar texto", () -> {
+      dismiss.run(); editMessage(a, text, user);
+    });
+    root.addView(ImparaSuperApp.buildTwoColRow(a, tCopy, tEdit), gap);
 
-   scroll.addView(root);
-   AlertDialog dialog = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
-   holder[0] = dialog;
-   ImparaSuperApp.styleDialogWindow(a, dialog, scroll);
-  } catch (Exception e) {
-   a.toast("Error abriendo historial");
-  }
- }
+    View tThirdLeft = (columnsBtn != null)
+      ? ImparaSuperApp.buildGridTile(a, "⊞", "Tabla", "Ver por columnas", () -> {
+          dismiss.run(); columnsBtn.performClick();
+        })
+      : ImparaSuperApp.buildGridTile(a, "↗", "Compartir", "Enviar frase", () -> {
+          dismiss.run(); ShareHub549.reply(a, text);
+        });
 
- private static void saveCurrentChat(MainActivity a) {
-  if (a.chat == null || a.chat.getChildCount() == 0) {
-   a.toast("No hay mensajes para guardar");
-   return;
+    View tColor = ImparaSuperApp.buildGridTile(a, "◐", "Color", "Estilo de burbuja", () -> {
+      dismiss.run(); ChatLook542.palette(a, user);
+    });
+    root.addView(ImparaSuperApp.buildTwoColRow(a, tThirdLeft, tColor), new LinearLayout.LayoutParams(-1, -2));
+
+    AlertDialog dialog = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
+    holder[0] = dialog;
+    ImparaSuperApp.styleDialogWindow(a, dialog, root);
   }
-  try {
-   JSONArray msgs = new JSONArray();
-   for (int i = 0; i < a.chat.getChildCount(); i++) {
-    View v = a.chat.getChildAt(i);
-    Object uTag = v.getTag(0x7e002602);
-    if (uTag instanceof Boolean && v instanceof ViewGroup) {
-     TextView tv = findMainText((ViewGroup) v);
-     if (tv != null) {
-      JSONObject m = new JSONObject();
-      m.put("u", (Boolean) uTag);
-      m.put("t", tv.getText().toString());
-      msgs.put(m);
-     }
+
+  private static void editMessage(MainActivity a, TextView text, boolean user) {
+    LinearLayout box = ImparaSuperApp.dialogHeader(a, "IMPARA L'ITALIANO", "Editar mensaje");
+    EditText et = ImparaSuperApp.styledInput(a, "Escribe tu mensaje...", text.getText().toString());
+    box.addView(et);
+
+    AlertDialog.Builder b = new AlertDialog.Builder(a)
+      .setPositiveButton("Guardar", (d, w) -> {
+        String val = et.getText().toString().trim();
+        if (!val.isEmpty()) {
+          text.setText(val);
+          a.toast("Mensaje editado");
+        }
+      })
+      .setNegativeButton("Cancelar", null);
+
+    if (user) {
+      b.setNeutralButton("Guardar y reenviar", (d, w) -> {
+        String val = et.getText().toString().trim();
+        if (!val.isEmpty()) {
+          text.setText(val);
+          a.ask(val);
+        }
+      });
     }
-   }
-   if (msgs.length() == 0) {
-    a.toast("Chat vacío");
-    return;
-   }
-   JSONArray arr = new JSONArray(a.prefs.getString(HIST_KEY, "[]"));
-   JSONObject session = new JSONObject();
-   session.put("title", new SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(new Date()));
-   session.put("msgs", msgs);
-   arr.put(session);
-   a.prefs.edit().putString(HIST_KEY, arr.toString()).apply();
-   a.toast("Conversación guardada (" + msgs.length() + " mensajes)");
-  } catch (Exception e) {
-   a.toast("No se pudo guardar");
+    ImparaSuperApp.styleDialogWindow(a, b.create(), box);
   }
- }
 
- private static void openSavedChat(MainActivity a, int idx) {
-  try {
-   JSONArray arr = new JSONArray(a.prefs.getString(HIST_KEY, "[]"));
-   JSONObject session = arr.getJSONObject(idx);
-   JSONArray msgs = session.getJSONArray("msgs");
-   StringBuilder sb = new StringBuilder();
-   for (int i = 0; i < msgs.length(); i++) {
-    JSONObject m = msgs.getJSONObject(i);
-    sb.append(m.optBoolean("u") ? "Tú: " : "Sofía: ").append(m.optString("t")).append("\n\n");
-   }
-   ScrollView scroll = new ScrollView(a);
-   LinearLayout box = ImparaSuperApp.dialogHeader(a, "SESIÓN GUARDADA", session.optString("title"));
-   TextView body = new TextView(a);
-   body.setText(sb.toString().trim());
-   body.setTextColor(Color.parseColor("#E6EEF8"));
-   body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-   body.setLineSpacing(a.dp(3), 1f);
-   box.addView(body);
-   scroll.addView(box);
-
-   AlertDialog dialog = new AlertDialog.Builder(a)
-    .setPositiveButton("Cargar en chat", (d, w) -> {
-     a.chat.removeAllViews();
-     for (int i = 0; i < msgs.length(); i++) {
-      JSONObject m = msgs.optJSONObject(i);
-      if (m != null) create(a, m.optString("t"), m.optBoolean("u"));
-     }
-     a.toast("Conversación cargada");
-    })
-    .setNeutralButton("Eliminar", (d, w) -> {
-     arr.remove(idx);
-     a.prefs.edit().putString(HIST_KEY, arr.toString()).apply();
-     a.toast("Sesión eliminada");
-    })
-    .setNegativeButton("Cerrar", null)
-    .create();
-   ImparaSuperApp.styleDialogWindow(a, dialog, scroll);
-  } catch (Exception e) {
-   a.toast("Error al cargar");
+  static void saveCurrentChat(MainActivity a) {
+    if (a.chat == null || a.chat.getChildCount() == 0) {
+      a.toast("No hay mensajes para guardar");
+      return;
+    }
+    try {
+      JSONArray msgs = new JSONArray();
+      for (int i = 0; i < a.chat.getChildCount(); i++) {
+        View v = a.chat.getChildAt(i);
+        Object uTag = v.getTag(0x7e002602);
+        if (uTag instanceof Boolean && v instanceof ViewGroup) {
+          TextView tv = findMainText((ViewGroup) v);
+          if (tv != null) {
+            JSONObject m = new JSONObject();
+            m.put("u", (Boolean) uTag);
+            m.put("t", tv.getText().toString());
+            msgs.put(m);
+          }
+        }
+      }
+      if (msgs.length() == 0) {
+        a.toast("Chat vacío");
+        return;
+      }
+      JSONArray arr = new JSONArray(a.prefs.getString(HIST_KEY, "[]"));
+      JSONObject session = new JSONObject();
+      session.put("title", new SimpleDateFormat("dd/MM HH:mm", Locale.getDefault()).format(new Date()));
+      session.put("msgs", msgs);
+      arr.put(session);
+      a.prefs.edit().putString(HIST_KEY, arr.toString()).apply();
+      a.toast("Conversación guardada (" + msgs.length() + " mensajes)");
+    } catch (Exception e) {
+      a.toast("No se pudo guardar");
+    }
   }
- }
 
- private static TextView findMainText(ViewGroup g) {
-  for (int i = 0; i < g.getChildCount(); i++) {
-   View c = g.getChildAt(i);
-   if (c instanceof TextView && Boolean.TRUE.equals(c.getTag(0x7e002601))) return (TextView) c;
-   if (c instanceof ViewGroup) {
-    TextView r = findMainText((ViewGroup) c);
-    if (r != null) return r;
-   }
+  static void openSavedChat(MainActivity a, int idx) {
+    try {
+      JSONArray arr = new JSONArray(a.prefs.getString(HIST_KEY, "[]"));
+      JSONObject session = arr.getJSONObject(idx);
+      JSONArray msgs = session.getJSONArray("msgs");
+      StringBuilder sb = new StringBuilder();
+      for (int i = 0; i < msgs.length(); i++) {
+        JSONObject m = msgs.getJSONObject(i);
+        sb.append(m.optBoolean("u") ? "Tú: " : "Sofía: ").append(m.optString("t")).append("\n\n");
+      }
+      ScrollView scroll = new ScrollView(a);
+      LinearLayout box = ImparaSuperApp.dialogHeader(a, "SESIÓN GUARDADA", session.optString("title"));
+      TextView body = new TextView(a);
+      body.setText(sb.toString().trim());
+      body.setTextColor(Color.parseColor("#E6EEF8"));
+      body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+      body.setLineSpacing(a.dp(3), 1f);
+      box.addView(body);
+      scroll.addView(box);
+
+      AlertDialog dialog = new AlertDialog.Builder(a)
+        .setPositiveButton("Cargar en chat", (d, w) -> {
+          a.chat.removeAllViews();
+          for (int i = 0; i < msgs.length(); i++) {
+            JSONObject m = msgs.optJSONObject(i);
+            if (m != null) create(a, m.optString("t"), m.optBoolean("u"));
+          }
+          a.toast("Conversación cargada");
+        })
+        .setNeutralButton("Eliminar", (d, w) -> {
+          arr.remove(idx);
+          a.prefs.edit().putString(HIST_KEY, arr.toString()).apply();
+          a.toast("Sesión eliminada");
+        })
+        .setNegativeButton("Cerrar", null)
+        .create();
+      ImparaSuperApp.styleDialogWindow(a, dialog, scroll);
+    } catch (Exception e) {
+      a.toast("Error al cargar");
+    }
   }
-  return null;
- }
 
- static void add(MainActivity a, LinearLayout row, Button b, int width, String label, int icon) {
-  detach(b);
-  styleModernIconButton(a, b, label, label, width > 0 ? width : 32);
-  row.addView(b, new LinearLayout.LayoutParams(a.dp(width > 0 ? width : 32), a.dp(28)));
- }
+  private static TextView findMainText(ViewGroup g) {
+    for (int i = 0; i < g.getChildCount(); i++) {
+      View c = g.getChildAt(i);
+      if (c instanceof TextView && Boolean.TRUE.equals(c.getTag(0x7e002601))) return (TextView) c;
+      if (c instanceof ViewGroup) {
+        TextView r = findMainText((ViewGroup) c);
+        if (r != null) return r;
+      }
+    }
+    return null;
+  }
+
+  static void add(MainActivity a, LinearLayout row, Button b, int width, String label, int icon) {
+    detach(b);
+    styleActionIcon(a, b, label, label, false);
+    row.addView(b, new LinearLayout.LayoutParams(a.dp(width > 0 ? width : 30), a.dp(28)));
+  }
 }
