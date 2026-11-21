@@ -186,20 +186,20 @@ public final class ChatBubbles {
       }
 
       if (spanishAudio != null) detach(spanishAudio);
-      if (audio != null) detach(audio);
-
-      if (table != null) {
-        detach(table);
-        bubble.addView(table, new LinearLayout.LayoutParams(-1, -2));
-      }
-
-      LinearLayout actions = new LinearLayout(a);
-      actions.setOrientation(LinearLayout.HORIZONTAL);
-      actions.setGravity(Gravity.END | Gravity.CENTER_VERTICAL);
-      actions.setPadding(0, a.dp(6), 0, a.dp(1));
-
-      Button playBtn = DeskUI.button(a, "▶", () -> ImparaSuperApp.speakItalianOnly(a, text.getText().toString(), 1.0f), false);
+      Button playBtn = DeskUI.button(a, "▶", () -> {
+        try {
+          ImparaSuperApp.speakItalianOnly(a, text.getText().toString(), 1.0f);
+        } catch (Throwable ignored) {}
+      }, false);
+      final Button playFeedback = playBtn;
+      playBtn.setOnClickListener(v -> {
+        playFeedback.setAlpha(0.45f);
+        UI.postDelayed(() -> playFeedback.setAlpha(1f), 450L);
+        ImparaSuperApp.speakItalianOnly(a, text.getText().toString(), 1.0f);
+      });
       playBtn.setOnLongClickListener(v -> {
+        playFeedback.setAlpha(0.45f);
+        UI.postDelayed(() -> playFeedback.setAlpha(1f), 450L);
         ImparaSuperApp.speakItalianOnly(a, text.getText().toString(), 0.75f);
         a.toast("Lento 0.75x (italiano)");
         return true;
