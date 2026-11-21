@@ -164,7 +164,7 @@ jobs:
                   out.writestr(copy.copy(it), js.encode("utf-8"))
               else:
                   out.writestr(copy.copy(it), old.read(it.filename))
-          for extra in ["desk.jpg"] + bg_files:
+          for extra in ["desk.jpg", "chiara.jpg"] + bg_files:
               ep = fondos_dir / extra
               if ep.exists():
                   out.writestr(zipfile.ZipInfo("assets/sofia84/" + extra), ep.read_bytes())
