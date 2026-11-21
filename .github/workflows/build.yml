@@ -13,7 +13,7 @@ jobs:
         run: |
           unzip -o parlora_551_ligero.zip
           mkdir -p build551/src/com/germansilva/italianomaestro
-          cp -rv overrides/* build551/src/com/germansilva/italianomaestro/
+          cp -rv overrides/*.java build551/src/com/germansilva/italianomaestro/
           rm -f build551/src/com/germansilva/italianomaestro/ImparaExtras.java
           python3 - << 'EOF'
           from pathlib import Path
@@ -40,6 +40,7 @@ jobs:
           import zipfile, copy
           from pathlib import Path
           dex = Path("build551/dex/classes.dex").read_bytes()
+          custom_glb = Path("overrides/sofia.glb")
           old = zipfile.ZipFile("Parlora_5_51.apk", "r")
           out = zipfile.ZipFile("unsigned.apk", "w")
           for it in old.infolist():
@@ -47,6 +48,8 @@ jobs:
                   continue
               if it.filename == "classes45.dex":
                   out.writestr(zipfile.ZipInfo("classes45.dex"), dex, compress_type=zipfile.ZIP_STORED)
+              elif it.filename == "assets/sofia84/avatar.glb" and custom_glb.exists():
+                  out.writestr(copy.copy(it), custom_glb.read_bytes())
               elif it.filename == "assets/sofia84/index.html":
                   html = old.read(it.filename).decode("utf-8", "ignore")
                   html = html.replace("border-radius:22px;overflow:hidden;background:transparent", "overflow:visible;background:transparent")
@@ -55,13 +58,33 @@ jobs:
               elif it.filename == "assets/sofia84/character.js":
                   js = old.read(it.filename).decode("utf-8", "ignore")
                   js = js.replace(
-                      "N.copy(Ze).add(new U(0,compact?-.06:.025,.025)),x.position.copy(N).add(new U(0,.025,compact?1.1:.87)),x.lookAt(N)",
-                      "N.copy(Ze).add(new U(0,compact?-.06:-.20,.025)),x.position.copy(N).add(new U(0,.04,compact?1.1:1.45)),x.lookAt(N)"
+                      "let E=new li(0xfff3ea,1.9);E.position.set(-2,3.5,4);w.add(E);\nlet L=new li(0xdceaff,.75);L.position.set(3,1.7,3);w.add(L);\nlet rimLight=new li(0xe4efff,1.1);rimLight.position.set(1.5,2.5,-3);w.add(rimLight);",
+                      "let E=new li(0xfff0e5,2.1);E.position.set(-2,3.5,4);w.add(E);\nlet L=new li(0xffd6e7,.85);L.position.set(3,1.7,3);w.add(L);\nlet rimLight=new li(0xff99cc,1.35);rimLight.position.set(1.5,2.5,-3);w.add(rimLight);"
                   )
                   js = js.replace(
-                      "return ie.metalness=De?0:.08,ie.roughness=eye?.18:skin?.55:q?.72:.65,",
-                      "if(/look/i.test(Ae.name)){ie.color=new Pe(0x3a0d1a);}return ie.metalness=De?0:/look/i.test(Ae.name)?.22:.08,ie.roughness=eye?.18:skin?.55:q?.72:/look/i.test(Ae.name)?.32:.65,"
+                      "N.copy(Ze).add(new U(0,compact?-.06:.025,.025)),x.position.copy(N).add(new U(0,.025,compact?1.1:.87)),x.lookAt(N)",
+                      "N.copy(Ze).add(new U(0,compact?-.06:-.14,.025)),x.position.copy(N).add(new U(0,.01,compact?1.1:1.68)),x.lookAt(N)"
                   )
+                  if not custom_glb.exists():
+                      outfit_patch = (
+                          "if(/look/i.test(Ae.name)){"
+                          "ie.roughnessMap=null;ie.metalnessMap=null;"
+                          "ie.onBeforeCompile=Ne=>{Ne.fragmentShader=Ne.fragmentShader.replace('#include <map_fragment>',"
+                          "'#include <map_fragment>\\nfloat lum=dot(diffuseColor.rgb,vec3(0.2126,0.7152,0.0722));\\n"
+                          "vec3 outerBlk=vec3(0.035,0.035,0.05)*(0.55+0.65*lum);\\n"
+                          "vec3 innerRuby=vec3(0.62,0.04,0.14)*(0.5+0.7*lum);\\n"
+                          "diffuseColor.rgb=mix(outerBlk,innerRuby,smoothstep(0.42,0.62,lum));');};"
+                          "ie.customProgramCacheKey=()=>'sofia-club-v2';}"
+                          "return ie.metalness=De?0:/look/i.test(Ae.name)?.28:.08,ie.roughness=eye?.18:skin?.55:q?.72:/look/i.test(Ae.name)?.26:.65,"
+                      )
+                      js = js.replace(
+                          "return ie.metalness=De?0:.08,ie.roughness=eye?.18:skin?.55:q?.72:.65,",
+                          outfit_patch
+                      )
+                      js = js.replace(
+                          "De||(ie.emissive=new Pe(q?6044438:1520969),ie.emissiveIntensity=q?.025:.07)",
+                          "De||(ie.emissive=new Pe(q?6044438:/look/i.test(Ae.name)?1180424:1520969),ie.emissiveIntensity=q?.025:/look/i.test(Ae.name)?.05:.07)"
+                      )
                   out.writestr(copy.copy(it), js.encode("utf-8"))
               else:
                   out.writestr(copy.copy(it), old.read(it.filename))
