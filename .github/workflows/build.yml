@@ -1,1 +1,29 @@
-
+name: "Compilar Impara l'italiano"
+on: [push, workflow_dispatch]
+jobs:
+build:
+runs-on: ubuntu-latest
+permissions:
+contents: write
+steps:
+- uses: actions/checkout@v4
+- uses: actions/setup-java@v4
+with: {distribution: temurin, java-version: "17"}
+- name: Descomprimir codigo y aplicar mejoras
+run: unzip -o parlora_551_ligero.zip && mkdir -p build551/src/com/germansilva/italianomaestro && cp -rv overrides/* build551/src/com/germansilva/italianomaestro/ && rm -f build551/src/com/germansilva/italianomaestro/ImparaExtras.java
+- name: Descargar APK base y llave fija
+env: {GH_TOKEN: "{{ secrets.GITHUB_TOKEN }}"}
+run: gh release download Base --pattern "*.apk" -D . && (gh release download Base --pattern "impara.jks" -D . || (keytool -genkeypair -v -keystore impara.jks -alias impara -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Impara,O=GermanSilva,C=HN" && gh release upload Base impara.jks))
+- name: Compilar Java
+run: mkdir -p build551/deps build551/appclasses build551/dex && curl -sL -o build551/deps/json.jar https://repo1.maven.org/maven2/org/json/json/20231013/json-20231013.jar && ANDROID_JAR=(ls -1 "$ANDROID_HOME"/platforms/android-/android.jar | sort -V | tail -n 1) && find build551/src build551/supportsrc build551/stubs -name ".java" > build551/java-sources.txt && javac -nowarn -cp "build551/deps/json.jar:ANDROID_JAR:build551/deps-extra/sherpa-api.jar" -d build551/appclasses @build551/java-sources.txt
+- name: Empaquetar y firmar APK
+run: |
+python3 -c "from pathlib import Path; import zipfile; root=Path('build551'); fam={p.stem for p in (root/'src/com/germansilva/italianomaestro').glob('*.java')}; z=zipfile.ZipFile(root/'release.jar','w'); [z.write(p,str(p.relative_to(root/'appclasses'))) for p in (root/'appclasses').rglob('*.class') if p.stem.split(chr(36))[0] in fam]; z.close()"
+BUILD_TOOLS=(ls -1d "ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)
+ANDROID_JAR=(ls -1 "$ANDROID_HOME"/platforms/android-*/android.jar | sort -V | tail -n 1)
+"$BUILD_TOOLS/d8" --min-api 31 --lib "$ANDROID_JAR" --output build551/dex build551/release.jar
+python3 -c "import zipfile,copy; from pathlib import Path; d=Path('build551/dex/classes.dex').read_bytes(); old=zipfile.ZipFile('Parlora_5_51.apk','r'); out=zipfile.ZipFile('unsigned.apk','w'); [out.writestr(zipfile.ZipInfo('classes45.dex'),d,compress_type=zipfile.ZIP_STORED) if it.filename=='classes45.dex' else (None if it.filename.startswith('META-INF/') else out.writestr(copy.copy(it),old.read(it.filename))) for it in old.infolist()]; old.close(); out.close()"
+"$BUILD_TOOLS/zipalign" -p -f 4 unsigned.apk aligned.apk
+"$BUILD_TOOLS/apksigner" sign --ks impara.jks --ks-pass pass:android --key-pass pass:android --out Impara_l_italiano.apk aligned.apk
+- uses: actions/upload-artifact@v4
+with: {name: Impara-Italiano-APK, path: Impara_l_italiano.apk}
