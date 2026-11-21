@@ -1,12 +1,17 @@
 package com.germansilva.italianomaestro;
 
 import android.app.AlertDialog;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.Editable;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.view.*;
 import android.widget.*;
 import java.text.SimpleDateFormat;
@@ -15,6 +20,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.json.*;
 
+/** Centro Super App completo de Impara l'italiano (100% autocontenido en un solo archivo). */
 public final class ImparaSuperApp {
   static final int INK = 0xFFFFFFFF;
   static final int STROKE_SUBTLE = 0x33FFFFFF;
@@ -34,6 +40,7 @@ public final class ImparaSuperApp {
   private static final String STYLE_KEY = "impara_sofia_style_v1";
   private static final String LEVEL_KEY = "impara_level_v1";
   private static final String THEME_KEY = "impara_theme_v1";
+  private static final String DAILY_DONE_KEY = "impara_daily_done_v1";
 
   private static final Pattern PAREN_PATTERN = Pattern.compile("\\([^()]*\\)");
   private static final String[] SPANISH_WORDS = {
@@ -48,6 +55,89 @@ public final class ImparaSuperApp {
     " donde ", " cuándo ", " cuando ", " cuánto ", " cuanto ", " necesito ", " hablar ",
     " decir ", " hacer ", " saber ", " pronunciar ", " mejor ", " los ", " las ",
     " el ", " del ", " dirías ", " dirias ", " día ", " dia "
+  };
+
+  private static final String[][] DAILY_WORDS = {
+    {"Magari", "¡Ojalá! / Ya me gustaría", "Magari potessi andare in Italia quest'anno!"},
+    {"Allora", "Entonces / Bueno / Pues", "Allora, da dove cominciamo oggi?"},
+    {"Comunque", "De todas formas / Sin embargo", "È tardi, ma comunque voglio studiare un po'."},
+    {"Appena", "Apenas / En cuanto", "Chiamami appena arrivi a casa."},
+    {"Abbastanza", "Bastante / Suficiente", "Parlo abbastanza bene l'italiano."},
+    {"Purtroppo", "Lamentablemente / Por desgracia", "Purtroppo oggi piove tutto il giorno."},
+    {"Soprattutto", "Sobre todo / Especialmente", "Amo la cucina italiana, soprattutto la pasta."},
+    {"Invece", "En cambio / Sin embargo", "Lui preferisce il tè, io invece bevo caffè."},
+    {"Davvero", "De verdad / Realmente", "Davvero hai imparato così in fretta?"},
+    {"Subito", "Enseguida / Inmediatamente", "Arrivo subito, dammi solo un minuto!"},
+    {"Mica", "Para nada / Ni siquiera (enfático)", "Non è mica difficile come sembra."},
+    {"Ormai", "Ya / A estas alturas", "Ormai capisco quasi tutto quello che dici."}
+  };
+
+  private static final String[][] VERBS_50 = {
+    {"essere", "ser / estar", "io sono, tu sei, lui è, noi siamo", "sono stato/a", "ero, eri, era", "sarò, sarai, sarà"},
+    {"avere", "tener / haber", "io ho, tu hai, lui ha, noi abbiamo", "ho avuto", "avevo, avevi, aveva", "avrò, avrai, avrà"},
+    {"fare", "hacer", "io faccio, tu fai, lui fa, noi facciamo", "ho fatto", "facevo, facevi, faceva", "farò, farai, farà"},
+    {"andare", "ir", "io vado, tu vai, lui va, noi andiamo", "sono andato/a", "andavo, andavi, andava", "andrò, andrai, andrà"},
+    {"potere", "poder", "io posso, tu puoi, lui può, noi possiamo", "ho potuto", "potevo, potevi, poteva", "potrò, potrai, potrà"},
+    {"volere", "querer", "io voglio, tu vuoi, lui vuole, noi vogliamo", "ho voluto", "volevo, volevi, voleva", "vorrò, vorrai, vorrà"},
+    {"dovere", "deber / tener que", "io devo, tu devi, lui deve, noi dobbiamo", "ho dovuto", "dovevo, dovevi, doveva", "dovrò, dovrai, dovrà"},
+    {"dire", "decir", "io dico, tu dici, lui dice, noi diciamo", "ho detto", "dicevo, dicevi, diceva", "dirò, dirai, dirà"},
+    {"sapere", "saber", "io so, tu sai, lui sa, noi sappiamo", "ho saputo", "sapevo, sapevi, sapeva", "saprò, saprai, saprà"},
+    {"vedere", "ver", "io vedo, tu vedi, lui vede, noi vediamo", "ho visto", "vedevo, vedevi, vedeva", "vedrò, vedrai, vedrà"},
+    {"venire", "venir", "io vengo, tu vieni, lui viene, noi veniamo", "sono venuto/a", "venivo, venivi, veniva", "verrò, verrai, verrà"},
+    {"stare", "estar / quedarse", "io sto, tu stai, lui sta, noi stiamo", "sono stato/a", "stavo, stavi, stava", "starò, starai, starà"},
+    {"dare", "dar", "io do, tu dai, lui dà, noi diamo", "ho dato", "davo, davi, dava", "darò, darai, darà"},
+    {"prendere", "tomar / coger", "io prendo, tu prendi, lui prende", "ho preso", "prendevo, prendevi", "prenderò, prenderai"},
+    {"parlare", "hablar", "io parlo, tu parli, lui parla", "ho parlato", "parlavo, parlavi", "parlerò, parlerai"},
+    {"mangiare", "comer", "io mangio, tu mangi, lui mangia", "ho mangiato", "mangiavo, mangiavi", "mangerò, mangerai"},
+    {"bere", "beber", "io bevo, tu bevi, lui beve, noi beviamo", "ho bevuto", "bevevo, bevevi", "berrò, berrai, berrà"},
+    {"dormire", "dormir", "io dormo, tu dormi, lui dorme", "ho dormito", "dormivo, dormivi", "dormirò, dormirai"},
+    {"lavorare", "trabajar", "io lavoro, tu lavori, lui lavora", "ho lavorato", "lavoravo, lavoravi", "lavorerò, lavorerai"},
+    {"studiare", "estudiar", "io studio, tu studi, lui studia", "ho studiato", "studiavo, studiavi", "studierò, studierai"},
+    {"scrivere", "escribir", "io scrivo, tu scrivi, lui scrive", "ho scritto", "scrivevo, scrivevi", "scriverò, scriverai"},
+    {"leggere", "leer", "io leggo, tu leggi, lui legge", "ho letto", "leggevo, leggevi", "leggerò, leggerai"},
+    {"capire", "entender", "io capisco, tu capisci, lui capisce", "ho capito", "capivo, capivi", "capirò, capirai"},
+    {"sentire", "oír / sentir", "io sento, tu senti, lui sente", "ho sentito", "sentivo, sentivi", "sentirò, sentirai"},
+    {"aprire", "abrir", "io apro, tu apri, lui apre", "ho aperto", "aprivo, aprivi", "aprirò, aprirai"},
+    {"chiudere", "cerrar", "io chiudo, tu chiudi, lui chiude", "ho chiuso", "chiudevo, chiudevi", "chiuderò, chiuderai"},
+    {"partire", "partir / salir", "io parto, tu parti, lui parte", "sono partito/a", "partivo, partivi", "partirò, partirai"},
+    {"arrivare", "llegar", "io arrivo, tu arrivi, lui arriva", "sono arrivato/a", "arrivavo, arrivavi", "arriverò, arriverai"},
+    {"tornare", "volver", "io torno, tu torni, lui torna", "sono tornato/a", "tornavo, tornavi", "tornerò, tornerai"},
+    {"uscire", "salir", "io esco, tu esci, lui esce, noi usciamo", "sono uscito/a", "uscivo, uscivi", "uscirò, uscirai"},
+    {"entrare", "entrar", "io entro, tu entri, lui entra", "sono entrato/a", "entravo, entravi", "entrerò, entrerai"},
+    {"aspettare", "esperar", "io aspetto, tu aspetti, lui aspetta", "ho aspettato", "aspettavo, aspettavi", "aspetterò, aspetterai"},
+    {"cercare", "buscar", "io cerco, tu cerchi, lui cerca", "ho cercato", "cercavo, cercavi", "cercherò, cercherai"},
+    {"trovare", "encontrar", "io trovo, tu trovi, lui trova", "ho trovato", "trovavo, trovavi", "troverò, troverai"},
+    {"comprare", "comprar", "io compro, tu compri, lui compra", "ho comprato", "compravo, compravi", "comprerò, comprerai"},
+    {"pagare", "pagar", "io pago, tu paghi, lui paga", "ho pagato", "pagavo, pagavi", "pagherò, pagherai"},
+    {"cucinare", "cocinar", "io cucino, tu cucini, lui cucina", "ho cucinato", "cucinavo, cucinavi", "cucinerò, cucinerai"},
+    {"giocare", "jugar", "io gioco, tu giochi, lui gioca", "ho giocato", "giocavo, giocavi", "giocherò, giocherai"},
+    {"guardare", "mirar / ver", "io guardo, tu guardi, lui guarda", "ho guardato", "guardavo, guardavi", "guarderò, guarderai"},
+    {"ascoltare", "escuchar", "io ascolto, tu ascolti, lui ascolta", "ho ascoltato", "ascoltavo, ascoltavi", "ascolterò, ascolterai"},
+    {"chiedere", "preguntar / pedir", "io chiedo, tu chiedi, lui chiede", "ho chiesto", "chiedevo, chiedevi", "chiederò, chiederai"},
+    {"rispondere", "responder", "io rispondo, tu rispondi, lui risponde", "ho risposto", "rispondevo, rispondevi", "risponderò, risponderai"},
+    {"conoscere", "conocer", "io conosco, tu conosci, lui conosce", "ho conosciuto", "conoscevo, conoscevi", "conoscerò, conoscerai"},
+    {"ricordare", "recordar", "io ricordo, tu ricordi, lui ricorda", "ho ricordato", "ricordavo, ricordavi", "ricorderò, ricorderai"},
+    {"dimenticare", "olvidar", "io dimentico, tu dimentichi, lui dimentica", "ho dimenticato", "dimenticavo, dimenticavi", "dimenticherò, dimenticherai"},
+    {"iniziare", "empezar", "io inizio, tu inizi, lui inizia", "ho iniziato", "iniziavo, iniziavi", "inizierò, inizierai"},
+    {"finire", "terminar", "io finisco, tu finisci, lui finisce", "ho finito", "finivo, finivi", "finirò, finirai"},
+    {"aiutare", "ayudar", "io aiuto, tu aiuti, lui aiuta", "ho aiutato", "aiutavo, aiutavi", "aiuterò, aiuterai"},
+    {"amare", "amar", "io amo, tu ami, lui ama", "ho amato", "amavo, amavi", "amerò, amerai"},
+    {"vivere", "vivir", "io vivo, tu vivi, lui vive", "ho vissuto", "vivevo, vivevi", "vivrò, vivrai"}
+  };
+
+  private static final String[][] FALSE_FRIENDS = {
+    {"Burro", "Mantequilla", "NO es el animal (eso es 'asino')", "Metto il burro sul pane caldo."},
+    {"Salire", "Subir", "NO es salir (eso es 'uscire')", "Saliamo al terzo piano a piedi."},
+    {"Caldo", "Caliente / Calor", "NO es sopa (eso es 'brodo')", "Oggi fa molto caldo a Roma!"},
+    {"Subito", "Enseguida / Ya", "NO es repentino (eso es 'improvviso')", "Torno subito, aspettami qui."},
+    {"Camera", "Habitación / Cuarto", "NO es cámara de fotos ('macchina fotografica')", "Ho prenotato una camera doppia."},
+    {"Largo", "Ancho", "NO es largo/extenso (eso es 'lungo')", "Questa strada è molto larga."},
+    {"Guardare", "Mirar", "NO es guardar (eso es 'conservare / mettere via')", "Guarda che bel tramonto!"},
+    {"Aceto", "Vinagre", "NO es aceite (eso es 'olio')", "Condisco l'insalata con olio e aceto."},
+    {"Officina", "Taller mecánico", "NO es oficina (eso es 'ufficio')", "La mia auto è in officina."},
+    {"Parenti", "Familiares / Parientes", "NO solo padres (padres es 'genitori')", "A Natale vedo tutti i miei parenti."},
+    {"Topo", "Ratón", "NO es topo animal (eso es 'talpa')", "C'è un piccolo topo in giardino."},
+    {"Imbarazzata", "Avergonzada / Incómoda", "NO es embarazada (eso es 'incinta')", "Ero un po' imbarazzata davanti a tutti."}
   };
 
   private static int[] palette(MainActivity a) {
@@ -293,6 +383,75 @@ public final class ImparaSuperApp {
     }
   }
 
+  private static TextView chipBtn(MainActivity a, String label, Runnable onClick) {
+    TextView tv = new TextView(a);
+    tv.setText(label);
+    tv.setTextColor(INK);
+    tv.setTextSize(12);
+    tv.setGravity(Gravity.CENTER);
+    tv.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+    tv.setPadding(a.dp(8), a.dp(7), a.dp(8), a.dp(7));
+    tv.setBackground(roundBg(a, bgCard(a), 0x44FFFFFF, 10));
+    tv.setOnClickListener(v -> safeRun(a, onClick));
+    return tv;
+  }
+
+  private static View buildDailyWordCard(MainActivity a, Runnable dismissHub) {
+    int dayIdx = Calendar.getInstance().get(Calendar.DAY_OF_YEAR) % DAILY_WORDS.length;
+    final String[] w = DAILY_WORDS[dayIdx];
+    final String today = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date());
+    final boolean done = a.prefs != null && today.equals(a.prefs.getString(DAILY_DONE_KEY, ""));
+
+    LinearLayout card = new LinearLayout(a);
+    card.setOrientation(LinearLayout.VERTICAL);
+    card.setPadding(a.dp(12), a.dp(10), a.dp(12), a.dp(10));
+    card.setBackground(roundBg(a, bgBadge(a), accent(a), 16));
+
+    TextView tag = new TextView(a);
+    tag.setText(done ? "PALABRA DEL DÍA · COMPLETADA" : "RETO DIARIO · PALABRA DEL DÍA (+20 XP)");
+    tag.setTextColor(accent(a));
+    tag.setTextSize(10.5f);
+    tag.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+    card.addView(tag);
+
+    TextView word = new TextView(a);
+    word.setText(w[0] + " — " + w[1]);
+    word.setTextColor(INK);
+    word.setTextSize(16);
+    word.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+    word.setPadding(0, a.dp(3), 0, a.dp(2));
+    card.addView(word);
+
+    TextView ex = new TextView(a);
+    ex.setText("«" + w[2] + "»");
+    ex.setTextColor(muted(a));
+    ex.setTextSize(12.5f);
+    ex.setPadding(0, 0, 0, a.dp(8));
+    card.addView(ex);
+
+    LinearLayout btnRow = new LinearLayout(a);
+    btnRow.setOrientation(LinearLayout.HORIZONTAL);
+
+    TextView bHear = chipBtn(a, "▶ Escuchar IT", () -> a.speak(w[0] + ". " + w[2], 0, 0.92f));
+    LinearLayout.LayoutParams lp1 = new LinearLayout.LayoutParams(0, -2, 1f);
+    lp1.setMarginEnd(a.dp(6));
+    btnRow.addView(bHear, lp1);
+
+    TextView bDone = chipBtn(a, done ? "Practicar" : "Completar +20 XP", () -> {
+      if (!done && a.prefs != null) {
+        a.prefs.edit().putString(DAILY_DONE_KEY, today).apply();
+        recordActivity(a, 20);
+        a.toast("¡Reto diario completado! +20 XP");
+      }
+      dismissHub.run();
+      a.ask("Ciao Sofia! Parliamo solo in italiano: fammi praticare la parola '" + w[0] + "' con un esempio semplice.");
+    });
+    btnRow.addView(bDone, new LinearLayout.LayoutParams(0, -2, 1f));
+
+    card.addView(btnRow);
+    return card;
+  }
+
   public static void openHub(MainActivity a, String selectedText) {
     Runnable launch = () -> safeRun(a, () -> openHubInternal(a, selectedText));
     if (a != null && a.root != null) a.root.post(launch);
@@ -315,6 +474,9 @@ public final class ImparaSuperApp {
     final AlertDialog[] holder = new AlertDialog[1];
     Runnable dismiss = () -> { if (holder[0] != null && holder[0].isShowing()) holder[0].dismiss(); };
 
+    // Tarjeta fija: Reto Diario + Palabra del Día
+    root.addView(buildDailyWordCard(a, dismiss), rowGap(a, 10));
+
     root.addView(buildOptionRow(a, "▶", "Pronunciar solo italiano", "Omite líneas en español para sonar natural", () -> {
       dismiss.run();
       String target = !TextUtils.isEmpty(selectedText) ? selectedText : "Buongiorno! Come stai oggi?";
@@ -323,8 +485,17 @@ public final class ImparaSuperApp {
 
     root.addView(buildOptionRow(a, "◎", "Modo Shadowing", "Italiano normal (1.0x), pausa y lento (0.75x)", () -> {
       dismiss.run();
-      String target = !TextUtils.isEmpty(selectedText) ? selectedText : "Vorrei un caffè macchiato, per favore.";
-      startShadowingCycle(a, target);
+      openShadowing(a, selectedText);
+    }), rowGap(a, 7));
+
+    root.addView(buildOptionRow(a, "V", "Conjugador de 50 verbos", "Presente, Passato, Imperfetto, Futuro + audio", () -> {
+      dismiss.run();
+      openVerbConjugator(a);
+    }), rowGap(a, 7));
+
+    root.addView(buildOptionRow(a, "!", "Falsos Amigos (ES vs. IT)", "Burro, salire, caldo, subito + mini-quiz", () -> {
+      dismiss.run();
+      openFalseFriends(a);
     }), rowGap(a, 7));
 
     root.addView(buildOptionRow(a, "✦", "Corrector de italiano", "Mejora tu frase con Sofía en italiano", () -> {
@@ -347,7 +518,27 @@ public final class ImparaSuperApp {
       openQuickPhrases(a);
     }), rowGap(a, 7));
 
-    root.addView(buildOptionRow(a, "≡", "Nivel de Sofía (" + level + ")", "Ajusta entre A1, A2, B1 y B2", () -> {
+    root.addView(buildOptionRow(a, "⇄", "Modo intérprete (ES ↔ IT)", "Traduce y escucha al instante", () -> {
+      dismiss.run();
+      openInterpreter(a, selectedText);
+    }), rowGap(a, 7));
+
+    root.addView(buildOptionRow(a, "»", "Jerga y modismos reales", "Boh, magari, ci sta, figurati...", () -> {
+      dismiss.run();
+      openSlang(a);
+    }), rowGap(a, 7));
+
+    root.addView(buildOptionRow(a, "?", "Mini-juego de agilidad", "Quiz rápido offline de preposiciones", () -> {
+      dismiss.run();
+      openMiniGame(a, 0, 0);
+    }), rowGap(a, 7));
+
+    root.addView(buildOptionRow(a, "≡", "Historia interactiva", "Cuento corto en italiano + 3 preguntas", () -> {
+      dismiss.run();
+      openStoryMode(a);
+    }), rowGap(a, 7));
+
+    root.addView(buildOptionRow(a, level, "Nivel de Sofía (" + level + ")", "Ajusta entre A1, A2, B1 y B2", () -> {
       dismiss.run();
       chooseLevel(a);
     }), rowGap(a, 7));
@@ -360,8 +551,329 @@ public final class ImparaSuperApp {
     root.addView(buildOptionRow(a, "★", "Estilo de Sofía", "Actual: " + style, () -> {
       dismiss.run();
       chooseSofiaStyle(a);
+    }), rowGap(a, 7));
+
+    root.addView(buildOptionRow(a, "⇪", "Respaldo de progreso (JSON)", "Exportar o importar flashcards, XP e historial", () -> {
+      dismiss.run();
+      openBackupDialog(a);
     }), rowGap(a, 0));
 
+    scroll.addView(root);
+    AlertDialog dialog = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
+    holder[0] = dialog;
+    styleDialogWindow(a, dialog, scroll);
+  }
+
+  private static void openVerbConjugator(MainActivity a) {
+    LinearLayout root = dialogHeader(a, "50 VERBOS ESENCIALES · OFFLINE", "Conjugador rápido");
+    EditText search = styledInput(a, "Buscar verbo (ej. essere, ir, comer)...", "");
+    root.addView(search, rowGap(a, 8));
+
+    ScrollView scroll = new ScrollView(a);
+    scroll.setVerticalScrollBarEnabled(false);
+    LinearLayout list = new LinearLayout(a);
+    list.setOrientation(LinearLayout.VERTICAL);
+    scroll.addView(list);
+    root.addView(scroll, new LinearLayout.LayoutParams(-1, a.dp(340)));
+
+    Runnable render = () -> {
+      list.removeAllViews();
+      String q = search.getText().toString().trim().toLowerCase(Locale.ROOT);
+      for (String[] v : VERBS_50) {
+        if (q.isEmpty() || v[0].contains(q) || v[1].toLowerCase(Locale.ROOT).contains(q)) {
+          final String[] verb = v;
+          list.addView(buildOptionRow(a, "V", verb[0] + " (" + verb[1] + ")",
+            "Pres: " + verb[2], () -> showVerbDetail(a, verb)), rowGap(a, 6));
+        }
+      }
+    };
+    render.run();
+
+    search.addTextChangedListener(new TextWatcher() {
+      public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+      public void onTextChanged(CharSequence s, int start, int before, int count) { render.run(); }
+      public void afterTextChanged(Editable s) {}
+    });
+
+    styleDialogWindow(a, new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create(), root);
+  }
+
+  private static void showVerbDetail(MainActivity a, String[] v) {
+    recordActivity(a, 5);
+    ScrollView scroll = new ScrollView(a);
+    LinearLayout box = dialogHeader(a, "CONJUGACIÓN · TOCA PARA OÍR", v[0] + " (" + v[1] + ")");
+    box.addView(buildOptionRow(a, "▶", "Presente", v[2], () -> a.speak(v[2], 0, 0.9f)), rowGap(a, 7));
+    box.addView(buildOptionRow(a, "▶", "Passato Prossimo", "io " + v[3], () -> a.speak("io " + v[3], 0, 0.9f)), rowGap(a, 7));
+    box.addView(buildOptionRow(a, "▶", "Imperfetto", v[4], () -> a.speak(v[4], 0, 0.9f)), rowGap(a, 7));
+    box.addView(buildOptionRow(a, "▶", "Futuro Semplice", v[5], () -> a.speak(v[5], 0, 0.9f)), rowGap(a, 0));
+    scroll.addView(box);
+
+    AlertDialog d = new AlertDialog.Builder(a)
+      .setPositiveButton("Practicar con Sofía", (x, y) -> a.ask("Ciao Sofia! Parliamo solo in italiano: fammi 3 frasi con il verbo '" + v[0] + "'."))
+      .setNegativeButton("Cerrar", null)
+      .create();
+    styleDialogWindow(a, d, scroll);
+  }
+
+  private static void openFalseFriends(MainActivity a) {
+    ScrollView scroll = new ScrollView(a);
+    LinearLayout root = dialogHeader(a, "TRAMPAS ES vs IT · OFFLINE", "Falsos Amigos");
+    final AlertDialog[] holder = new AlertDialog[1];
+
+    root.addView(buildOptionRow(a, "?", "Iniciar Mini-Quiz de Falsos Amigos",
+      "Pon a prueba tu reflejo (+10 XP por acierto)", () -> {
+        if (holder[0] != null) holder[0].dismiss();
+        runFalseFriendQuiz(a, 0, 0);
+      }), rowGap(a, 7));
+
+    for (String[] f : FALSE_FRIENDS) {
+      final String[] ff = f;
+      root.addView(buildOptionRow(a, "!", ff[0] + " = " + ff[1],
+        ff[2] + "\nEj: " + ff[3], () -> {
+          recordActivity(a, 3);
+          a.speak(ff[0] + ". " + ff[3], 0, 0.9f);
+        }), rowGap(a, 7));
+    }
+    scroll.addView(root);
+    AlertDialog dialog = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
+    holder[0] = dialog;
+    styleDialogWindow(a, dialog, scroll);
+  }
+
+  private static void runFalseFriendQuiz(MainActivity a, int idx, int score) {
+    int total = 5;
+    if (idx >= total) {
+      recordActivity(a, score * 10);
+      LinearLayout box = dialogHeader(a, "QUIZ TERMINADO", "Aciertos: " + score + " / " + total);
+      TextView tv = new TextView(a);
+      tv.setText("Ganaste +" + (score * 10) + " XP.");
+      tv.setTextColor(muted(a));
+      box.addView(tv);
+      styleDialogWindow(a, new AlertDialog.Builder(a).setPositiveButton("¡Genial!", null).create(), box);
+      return;
+    }
+    Random r = new Random();
+    int target = (idx * 2 + r.nextInt(2)) % FALSE_FRIENDS.length;
+    final String[] item = FALSE_FRIENDS[target];
+    ArrayList<String> opts = new ArrayList<>();
+    opts.add(item[1]);
+    while (opts.size() < 3) {
+      String cand = FALSE_FRIENDS[r.nextInt(FALSE_FRIENDS.length)][1];
+      if (!opts.contains(cand)) opts.add(cand);
+    }
+    Collections.shuffle(opts);
+
+    LinearLayout root = dialogHeader(a, "FALSOS AMIGOS · " + (idx + 1) + "/" + total,
+      "¿Qué significa «" + item[0] + "» en italiano?");
+    final AlertDialog[] holder = new AlertDialog[1];
+
+    for (String opt : opts) {
+      final String choice = opt;
+      root.addView(buildOptionRow(a, "»", choice, "Toca para responder", () -> {
+        if (holder[0] != null) holder[0].dismiss();
+        boolean ok = choice.equals(item[1]);
+        a.toast(ok ? "¡Correcto! " + item[0] + " = " + item[1] : "Era: " + item[1]);
+        runFalseFriendQuiz(a, idx + 1, score + (ok ? 1 : 0));
+      }), rowGap(a, 7));
+    }
+    AlertDialog d = new AlertDialog.Builder(a).setNegativeButton("Salir", null).create();
+    holder[0] = d;
+    styleDialogWindow(a, d, root);
+  }
+
+  private static void openShadowing(MainActivity a, String initialPhrase) {
+    String cleanInitial = extractItalianOnly(initialPhrase);
+    final String[] presets = {
+      !TextUtils.isEmpty(cleanInitial) ? cleanInitial : "Vorrei un caffè macchiato e un cornetto, per favore.",
+      "Scusa, puoi parlare un po' più lentamente?",
+      "Mi piace molto imparare l'italiano ogni giorno.",
+      "Che bella giornata per fare una passeggiata in centro!",
+      "Non vedo l'ora di visitare Roma e Firenze."
+    };
+
+    ScrollView scroll = new ScrollView(a);
+    LinearLayout root = dialogHeader(a, "ENTRENADOR DE ACENTO", "Modo Shadowing");
+    TextView info = new TextView(a);
+    info.setText("Sofía dice la frase en italiano normal (1.0x), hace una pausa para que repitas y luego la repite lenta (0.75x).");
+    info.setTextColor(muted(a));
+    info.setTextSize(12.5f);
+    info.setPadding(0, 0, 0, a.dp(8));
+    root.addView(info);
+
+    for (int i = 0; i < presets.length; i++) {
+      final String phrase = presets[i];
+      String label = (i == 0 && !TextUtils.isEmpty(cleanInitial)) ? "Frase del mensaje actual" : "Práctica #" + (i + 1);
+      root.addView(buildOptionRow(a, "◎", label, phrase, () -> startShadowingCycle(a, phrase)), rowGap(a, 7));
+    }
+
+    scroll.addView(root);
+    styleDialogWindow(a, new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create(), scroll);
+  }
+
+  private static void openBackupDialog(MainActivity a) {
+    ScrollView scroll = new ScrollView(a);
+    LinearLayout root = dialogHeader(a, "SEGURIDAD OFFLINE", "Respaldo de progreso (JSON)");
+    final AlertDialog[] holder = new AlertDialog[1];
+
+    root.addView(buildOptionRow(a, "⇪", "Exportar todo al portapapeles",
+      "Copia flashcards, XP, racha, nivel, tema e historial", () -> {
+        try {
+          JSONObject out = new JSONObject();
+          out.put("v", 1);
+          out.put("cards", a.prefs.getString(CARDS_KEY, "[]"));
+          out.put("history", a.prefs.getString("impara_chat_history_v1", "[]"));
+          out.put("xp", a.prefs.getInt(XP_KEY, 0));
+          out.put("streak", a.prefs.getInt(STREAK_KEY, 1));
+          out.put("last_day", a.prefs.getString(LAST_DAY_KEY, ""));
+          out.put("level", a.prefs.getString(LEVEL_KEY, "A2"));
+          out.put("theme", a.prefs.getInt(THEME_KEY, 0));
+          out.put("style", a.prefs.getString(STYLE_KEY, "Profesora italiana"));
+          ClipboardManager cm = (ClipboardManager) a.getSystemService(Context.CLIPBOARD_SERVICE);
+          if (cm != null) {
+            cm.setPrimaryClip(ClipData.newPlainText("ImparaBackup", out.toString()));
+            a.toast("Respaldo copiado. Guárdalo en tus notas.");
+          }
+        } catch (Exception e) {
+          a.toast("Error exportando respaldo");
+        }
+      }), rowGap(a, 7));
+
+    root.addView(buildOptionRow(a, "⇩", "Importar respaldo JSON",
+      "Pega aquí tu código guardado para restaurar todo", () -> {
+        if (holder[0] != null) holder[0].dismiss();
+        LinearLayout box = dialogHeader(a, "RESTAURAR DATOS", "Pega tu respaldo JSON");
+        EditText et = styledInput(a, "{\"v\":1,...}", "");
+        box.addView(et);
+        AlertDialog d2 = new AlertDialog.Builder(a)
+          .setPositiveButton("Restaurar", (x, y) -> {
+            try {
+              JSONObject in = new JSONObject(et.getText().toString().trim());
+              a.prefs.edit()
+                .putString(CARDS_KEY, in.optString("cards", "[]"))
+                .putString("impara_chat_history_v1", in.optString("history", "[]"))
+                .putInt(XP_KEY, in.optInt("xp", 0))
+                .putInt(STREAK_KEY, in.optInt("streak", 1))
+                .putString(LAST_DAY_KEY, in.optString("last_day", ""))
+                .putString(LEVEL_KEY, in.optString("level", "A2"))
+                .putInt(THEME_KEY, in.optInt("theme", 0))
+                .putString(STYLE_KEY, in.optString("style", "Profesora italiana"))
+                .apply();
+              a.toast("Progreso restaurado con éxito");
+            } catch (Exception e) {
+              a.toast("JSON inválido. Verifica que lo copiaste completo.");
+            }
+          })
+          .setNegativeButton("Cancelar", null)
+          .create();
+        styleDialogWindow(a, d2, box);
+      }), rowGap(a, 0));
+
+    scroll.addView(root);
+    AlertDialog dialog = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
+    holder[0] = dialog;
+    styleDialogWindow(a, dialog, scroll);
+  }
+
+  private static void openInterpreter(MainActivity a, String initial) {
+    LinearLayout box = dialogHeader(a, "INTÉRPRETE ES ↔ IT", "Traduce y habla");
+    EditText input = styledInput(a, "Escribe en español o italiano...", initial);
+    box.addView(input);
+
+    AlertDialog dialog = new AlertDialog.Builder(a)
+      .setPositiveButton("A Italiano", (d, w) -> {
+        String txt = input.getText().toString().trim();
+        if (!txt.isEmpty()) {
+          recordActivity(a, 10);
+          a.ask("Rispondi solo in italiano: traduci in italiano naturale questa frase:\n" + txt);
+        }
+      })
+      .setNeutralButton("▶ Leer IT", (d, w) -> {
+        String txt = input.getText().toString().trim();
+        if (!txt.isEmpty()) speakItalianOnly(a, txt, 0.95f);
+      })
+      .setNegativeButton("Cerrar", null)
+      .create();
+    styleDialogWindow(a, dialog, box);
+  }
+
+  private static void openSlang(MainActivity a) {
+    final String[] terms = {"Boh!", "Magari!", "Ci sta", "In bocca al lupo!", "Figurati!", "Dai!"};
+    final String[] defs = {
+      "¡Quién sabe! / Ni idea",
+      "¡Ojalá! / ¡Ya me gustaría!",
+      "Tiene sentido / Me parece bien",
+      "¡Mucha suerte! (se responde: Crepi!)",
+      "¡Ni lo menciones! / De nada",
+      "¡Vamos! / ¡Venga ya!"
+    };
+
+    ScrollView scroll = new ScrollView(a);
+    LinearLayout root = dialogHeader(a, "ITALIANO REAL", "Jerga y modismos");
+
+    for (int i = 0; i < terms.length; i++) {
+      final int idx = i;
+      root.addView(buildOptionRow(a, "▶", terms[i], defs[i], () -> {
+        recordActivity(a, 5);
+        a.speak(terms[idx], 0, 0.9f);
+      }), rowGap(a, 7));
+    }
+    scroll.addView(root);
+    styleDialogWindow(a, new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create(), scroll);
+  }
+
+  private static void openMiniGame(MainActivity a, int qIdx, int score) {
+    final String[][] qs = {
+      {"Vado ___ Italia questa estate.", "in", "a", "da"},
+      {"Abito ___ Roma da due anni.", "a", "in", "su"},
+      {"Vengo ___ casa di Marco.", "da", "in", "per"},
+      {"Io ___ un caffè ogni mattina.", "bevo", "bevi", "bere"}
+    };
+    if (qIdx >= qs.length) {
+      recordActivity(a, score * 10);
+      LinearLayout box = dialogHeader(a, "MINI-JUEGO TERMINADO", "Puntaje: " + score + " / " + qs.length);
+      TextView tv = new TextView(a);
+      tv.setText("Ganaste +" + (score * 10) + " XP.");
+      tv.setTextColor(muted(a));
+      box.addView(tv);
+      styleDialogWindow(a, new AlertDialog.Builder(a).setPositiveButton("¡Genial!", null).create(), box);
+      return;
+    }
+
+    final String[] q = qs[qIdx];
+    ArrayList<String> opts = new ArrayList<>(Arrays.asList(q[1], q[2], q[3]));
+    Collections.shuffle(opts);
+
+    LinearLayout root = dialogHeader(a, "RETO " + (qIdx + 1) + "/" + qs.length, q[0]);
+    final AlertDialog[] holder = new AlertDialog[1];
+
+    for (String opt : opts) {
+      final String choice = opt;
+      root.addView(buildOptionRow(a, "»", choice, "Toca para responder", () -> {
+        if (holder[0] != null) holder[0].dismiss();
+        boolean ok = choice.equals(q[1]);
+        a.toast(ok ? "¡Correcto!" : "Era: " + q[1]);
+        openMiniGame(a, qIdx + 1, score + (ok ? 1 : 0));
+      }), rowGap(a, 7));
+    }
+    AlertDialog dialog = new AlertDialog.Builder(a).setNegativeButton("Salir", null).create();
+    holder[0] = dialog;
+    styleDialogWindow(a, dialog, root);
+  }
+
+  private static void openStoryMode(MainActivity a) {
+    final String[] genres = {"Misterio en Venecia", "Comedia en Roma", "Romance en Florencia", "Viaje en tren"};
+    ScrollView scroll = new ScrollView(a);
+    LinearLayout root = dialogHeader(a, "HISTORIA INTERACTIVA", "Elige un tema");
+    final AlertDialog[] holder = new AlertDialog[1];
+
+    for (String g : genres) {
+      final String genre = g;
+      root.addView(buildOptionRow(a, "≡", genre, "Cuento corto + 3 preguntas", () -> {
+        if (holder[0] != null) holder[0].dismiss();
+        recordActivity(a, 15);
+        a.ask("Rispondi solo in italiano: raccontami una storia breve sul tema '" + genre + "' e alla fine fammi 3 domande.");
+      }), rowGap(a, 7));
+    }
     scroll.addView(root);
     AlertDialog dialog = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
     holder[0] = dialog;
@@ -480,7 +992,7 @@ public final class ImparaSuperApp {
       ScrollView scroll = new ScrollView(a);
       LinearLayout root = dialogHeader(a, "CUADERNO OFFLINE", "Flashcards (" + cards.length() + ")");
       final AlertDialog[] holder = new AlertDialog[1];
-      Runnable dismiss = () -> { if (holder[0] != null) holder[0].dismiss(); };
+      Runnable dismiss = () -> { if (holder[0] != null && holder[0].isShowing()) holder[0].dismiss(); };
 
       root.addView(buildOptionRow(a, "+", "Guardar frase actual", "Añadir a tus tarjetas de repaso", () -> {
         dismiss.run();
@@ -490,7 +1002,7 @@ public final class ImparaSuperApp {
       for (int i = cards.length() - 1; i >= 0; i--) {
         final int idx = i;
         final String phrase = cards.getJSONObject(i).optString("it", "");
-        root.addView(buildOptionRow(a, "♡", phrase, "Toca para escuchar o eliminar", () -> {
+        root.addView(buildOptionRow(a, "♡", phrase, "Toca para escuchar, shadowing o eliminar", () -> {
           dismiss.run();
           LinearLayout box = dialogHeader(a, "REPASO", "Tarjeta guardada");
           TextView tv = new TextView(a);
@@ -500,7 +1012,7 @@ public final class ImparaSuperApp {
           box.addView(tv);
           AlertDialog d2 = new AlertDialog.Builder(a)
             .setPositiveButton("▶ Normal", (x, y) -> speakItalianOnly(a, phrase, 1.0f))
-            .setNeutralButton("▶ Lento", (x, y) -> speakItalianOnly(a, phrase, 0.78f))
+            .setNeutralButton("◎ Shadowing", (x, y) -> startShadowingCycle(a, phrase))
             .setNegativeButton("Eliminar", (x, y) -> {
               cards.remove(idx);
               a.prefs.edit().putString(CARDS_KEY, cards.toString()).apply();
@@ -591,4 +1103,4 @@ public final class ImparaSuperApp {
     }
     prefs.edit().putInt(XP_KEY, prefs.getInt(XP_KEY, 0) + Math.max(0, gainedXp)).apply();
   }
-}
+        }
