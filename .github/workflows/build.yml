@@ -28,6 +28,9 @@ jobs:
       - name: Descargar APK base y llave fija
         env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
         run: gh release download Base --pattern "*.apk" -D . && (gh release download Base --pattern "impara.jks" -D . || (keytool -genkeypair -v -keystore impara.jks -alias impara -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Impara,O=GermanSilva,C=HN" && gh release upload Base impara.jks))
+      - name: Inspeccionar 10 fotos de fondo
+        run: |
+          python3 -c "import zipfile; z=zipfile.ZipFile('Parlora_5_51.apk'); print('\n'.join([n for n in z.namelist() if any(k in n.lower() for k in ['wall','bg','fondo','backdrop','room','scene','.jpg','.webp'])]))[:2000]"
       - name: Compilar Java
         run: mkdir -p build551/deps build551/appclasses build551/dex && curl -sL -o build551/deps/json.jar https://repo1.maven.org/maven2/org/json/json/20231013/json-20231013.jar && ANDROID_JAR=$(ls -1 "$ANDROID_HOME"/platforms/android-*/android.jar | sort -V | tail -n 1) && find build551/src build551/supportsrc build551/stubs -name "*.java" > build551/java-sources.txt && javac -nowarn -cp "build551/deps/json.jar:$ANDROID_JAR:build551/deps-extra/sherpa-api.jar" -d build551/appclasses @build551/java-sources.txt
       - name: Empaquetar y firmar APK
@@ -52,18 +55,32 @@ jobs:
                   out.writestr(copy.copy(it), custom_glb.read_bytes())
               elif it.filename == "assets/sofia84/index.html":
                   html = old.read(it.filename).decode("utf-8", "ignore")
-                  html = html.replace("border-radius:22px;overflow:hidden;background:transparent", "overflow:visible;background:transparent")
+                  html = html.replace("border-radius:22px;overflow:hidden;background:transparent", "border-radius:18px;overflow:hidden;background:transparent;transition:background .35s ease")
                   html = html.replace(".label{", ".label{display:none!important;")
+                  bg_ui = (
+                      "<button id='bgBtn' title='Cambiar fondo' style='position:absolute;top:8px;right:8px;z-index:20;background:rgba(12,32,37,.65);color:#f3f1e8;border:1px solid rgba(255,255,255,.22);border-radius:12px;padding:4px 9px;font-size:11px;backdrop-filter:blur(6px)'>🖼 Fondo</button>"
+                      "<script>(()=>{const st=document.getElementById('sofiaStage'),btn=document.getElementById('bgBtn');"
+                      "const bgs=["
+                      "{n:'Sin fondo',css:'transparent'},"
+                      "{n:'Pizarra',css:'radial-gradient(circle at 50% 35%, #23473a 0%, #132821 75%, #0c1915 100%)'},"
+                      "{n:'Biblioteca',css:'linear-gradient(160deg, #3b2618 0%, #1f140d 65%, #120b07 100%)'},"
+                      "{n:'Roma',css:'linear-gradient(180deg, #3a4f7a 0%, #7d5a5a 55%, #241c24 100%)'},"
+                      "{n:'Estudio',css:'radial-gradient(circle at 50% 25%, #243b55 0%, #141e30 85%)'}"
+                      "];let idx=+(localStorage.getItem('sofia_bg_idx')||0)%bgs.length;"
+                      "function apply(){st.style.background=bgs[idx].css;btn.textContent='🖼 '+bgs[idx].n;localStorage.setItem('sofia_bg_idx',idx);}"
+                      "btn.onclick=()=>{idx=(idx+1)%bgs.length;apply();};apply();})();</script></body>"
+                  )
+                  html = html.replace("</body>", bg_ui)
                   out.writestr(copy.copy(it), html.encode("utf-8"))
               elif it.filename == "assets/sofia84/character.js":
                   js = old.read(it.filename).decode("utf-8", "ignore")
                   js = js.replace(
                       "let E=new li(0xfff3ea,1.9);E.position.set(-2,3.5,4);w.add(E);\nlet L=new li(0xdceaff,.75);L.position.set(3,1.7,3);w.add(L);\nlet rimLight=new li(0xe4efff,1.1);rimLight.position.set(1.5,2.5,-3);w.add(rimLight);",
-                      "let E=new li(0xfff0e5,2.1);E.position.set(-2,3.5,4);w.add(E);\nlet L=new li(0xffd6e7,.85);L.position.set(3,1.7,3);w.add(L);\nlet rimLight=new li(0xff99cc,1.35);rimLight.position.set(1.5,2.5,-3);w.add(rimLight);"
+                      "let E=new li(0xfff5eb,2.0);E.position.set(-2,3.5,4);w.add(E);\nlet L=new li(0xe8f1ff,.85);L.position.set(3,1.7,3);w.add(L);\nlet rimLight=new li(0xfff0dd,1.15);rimLight.position.set(1.5,2.5,-3);w.add(rimLight);"
                   )
                   js = js.replace(
                       "N.copy(Ze).add(new U(0,compact?-.06:.025,.025)),x.position.copy(N).add(new U(0,.025,compact?1.1:.87)),x.lookAt(N)",
-                      "N.copy(Ze).add(new U(0,compact?-.06:-.14,.025)),x.position.copy(N).add(new U(0,.01,compact?1.1:1.68)),x.lookAt(N)"
+                      "N.copy(Ze).add(new U(0,compact?-.06:-.13,.025)),x.position.copy(N).add(new U(0,.01,compact?1.1:1.65)),x.lookAt(N)"
                   )
                   if not custom_glb.exists():
                       outfit_patch = (
@@ -71,35 +88,31 @@ jobs:
                           "ie.roughnessMap=null;ie.metalnessMap=null;"
                           "ie.onBeforeCompile=Ne=>{Ne.fragmentShader=Ne.fragmentShader.replace('#include <map_fragment>',"
                           "'#include <map_fragment>\\nfloat lum=dot(diffuseColor.rgb,vec3(0.2126,0.7152,0.0722));\\n"
-                          "vec3 outerBlk=vec3(0.035,0.035,0.05)*(0.55+0.65*lum);\\n"
-                          "vec3 innerRuby=vec3(0.62,0.04,0.14)*(0.5+0.7*lum);\\n"
-                          "diffuseColor.rgb=mix(outerBlk,innerRuby,smoothstep(0.42,0.62,lum));');};"
-                          "ie.customProgramCacheKey=()=>'sofia-club-v2';}"
-                          "return ie.metalness=De?0:/look/i.test(Ae.name)?.28:.08,ie.roughness=eye?.18:skin?.55:q?.72:/look/i.test(Ae.name)?.26:.65,"
+                          "vec3 blazerNavy=vec3(0.08,0.12,0.22)*(0.65+0.55*lum);\\n"
+                          "vec3 blouseWhite=vec3(0.95,0.94,0.91)*(0.75+0.30*lum);\\n"
+                          "diffuseColor.rgb=mix(blazerNavy,blouseWhite,smoothstep(0.45,0.62,lum));');};"
+                          "ie.customProgramCacheKey=()=>'sofia-prof-v1';}"
+                          "return ie.metalness=De?0:/look/i.test(Ae.name)?.04:.08,ie.roughness=eye?.18:skin?.55:q?.72:/look/i.test(Ae.name)?.78:.65,"
                       )
                       js = js.replace(
                           "return ie.metalness=De?0:.08,ie.roughness=eye?.18:skin?.55:q?.72:.65,",
                           outfit_patch
-                      )
-                      js = js.replace(
-                          "De||(ie.emissive=new Pe(q?6044438:1520969),ie.emissiveIntensity=q?.025:.07)",
-                          "De||(ie.emissive=new Pe(q?6044438:/look/i.test(Ae.name)?1180424:1520969),ie.emissiveIntensity=q?.025:/look/i.test(Ae.name)?.05:.07)"
                       )
                   body_anim = (
                       "let Y=new wt,ne=new sn,_baInit=false,_ba={},_sp=0;"
                       "function _sofiaBodyAnim(){"
                       "if(!s)return;"
                       "if(!_baInit){_baInit=true;for(const k of['Spine1','Spine2','LeftShoulder','RightShoulder','LeftArm','RightArm','LeftForeArm','RightForeArm','LeftHand','RightHand']){const o=s.getObjectByName(k);if(o)_ba[k]={o,q:o.quaternion.clone()};}}"
-                      "const tm=performance.now()*0.001;_sp+=((t==='speaking'?1:0)-_sp)*0.07;const br=Math.sin(tm*1.7);"
+                      "const tm=performance.now()*0.001;_sp+=((t==='speaking'?1:0)-_sp)*0.08;const br=Math.sin(tm*1.6);"
                       "const set=(k,rx,ry,rz)=>{const d=_ba[k];if(!d)return;d.o.quaternion.copy(d.q).multiply(new wt().setFromEuler(new sn(rx,ry,rz)));};"
-                      "set('Spine2',0.025*br+_sp*0.03*Math.sin(tm*2.4),0.04*Math.sin(tm*0.7)+_sp*0.05*Math.sin(tm*1.5),0.02*Math.sin(tm*0.9));"
-                      "set('LeftShoulder',0,0,0.03*br);set('RightShoulder',0,0,-0.03*br);"
-                      "set('LeftArm',0.14+_sp*(0.28+0.14*Math.sin(tm*2.3)),0.06+_sp*0.1*Math.cos(tm*1.8),-0.16-_sp*0.12*Math.sin(tm*1.9));"
-                      "set('RightArm',0.14+_sp*(0.32+0.16*Math.cos(tm*2.1)),-0.06-_sp*0.1*Math.sin(tm*1.7),0.16+_sp*0.14*Math.cos(tm*1.6));"
-                      "set('LeftForeArm',0.32+0.04*br+_sp*(0.42+0.18*Math.sin(tm*2.8)),0,0.20+_sp*0.12*Math.cos(tm*2.2));"
-                      "set('RightForeArm',0.32+0.04*br+_sp*(0.46+0.20*Math.cos(tm*2.6)),0,-0.20-_sp*0.12*Math.sin(tm*2.4));"
-                      "set('LeftHand',_sp*0.18*Math.sin(tm*3.2),0,_sp*0.12*Math.cos(tm*2.5));"
-                      "set('RightHand',_sp*0.18*Math.cos(tm*3.0),0,-_sp*0.12*Math.sin(tm*2.7));"
+                      "set('Spine2',0.02*br+_sp*0.025*Math.sin(tm*2.2),0.035*Math.sin(tm*0.7)+_sp*0.045*Math.sin(tm*1.4),0.015*Math.sin(tm*0.9));"
+                      "set('LeftShoulder',0,0,0.025*br);set('RightShoulder',0,0,-0.025*br);"
+                      "set('LeftArm',-0.18-_sp*(0.30+0.14*Math.sin(tm*2.3)),0.10+_sp*0.12*Math.cos(tm*1.8),-0.10-_sp*0.08*Math.sin(tm*1.9));"
+                      "set('RightArm',-0.18-_sp*(0.34+0.16*Math.cos(tm*2.1)),-0.10-_sp*0.12*Math.sin(tm*1.7),0.10+_sp*0.08*Math.cos(tm*1.6));"
+                      "set('LeftForeArm',-0.36-0.04*br-_sp*(0.45+0.20*Math.sin(tm*2.7)),0.12+_sp*0.10*Math.cos(tm*2.1),0.12);"
+                      "set('RightForeArm',-0.36-0.04*br-_sp*(0.48+0.22*Math.cos(tm*2.5)),-0.12-_sp*0.10*Math.sin(tm*2.3),-0.12);"
+                      "set('LeftHand',-_sp*0.20*Math.sin(tm*3.1),_sp*0.12*Math.cos(tm*2.4),0);"
+                      "set('RightHand',-_sp*0.20*Math.cos(tm*2.9),-_sp*0.12*Math.sin(tm*2.6),0);"
                       "}"
                   )
                   js = js.replace("let Y=new wt,ne=new sn;", body_anim)
