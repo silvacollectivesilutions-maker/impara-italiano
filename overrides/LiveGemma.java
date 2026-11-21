@@ -1,14 +1,17 @@
 package com.germansilva.italianomaestro;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.RadialGradient;
 import android.graphics.Shader;
 import android.graphics.Typeface;
@@ -22,7 +25,6 @@ import android.speech.SpeechRecognizer;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -40,19 +42,11 @@ public class LiveGemma {
     private static final String KEY_LIST = "gems_json";
     private static final String KEY_ACTIVE = "active_gem";
 
-    public static GradientDrawable neonPill(int fill, int stroke, int radiusDp, Context c) {
+    public static GradientDrawable glassPill(int fill, int stroke, int radiusDp, Context c) {
         GradientDrawable gd = new GradientDrawable();
         gd.setColor(fill);
-        gd.setStroke(dp(c, 1.5f), stroke);
+        gd.setStroke(dp(c, 1f), stroke);
         gd.setCornerRadius(dp(c, radiusDp));
-        return gd;
-    }
-
-    public static GradientDrawable neonCircle(int fill, int stroke, Context c) {
-        GradientDrawable gd = new GradientDrawable();
-        gd.setShape(GradientDrawable.OVAL);
-        gd.setColor(fill);
-        gd.setStroke(dp(c, 2f), stroke);
         return gd;
     }
 
@@ -68,21 +62,21 @@ public class LiveGemma {
         bar.setPadding(p, p, p, p);
 
         TextView liveBtn = new TextView(a);
-        liveBtn.setText("✦ Live");
-        liveBtn.setTextColor(Color.parseColor("#E8F7FF"));
+        liveBtn.setText("Live");
+        liveBtn.setTextColor(Color.parseColor("#E0F2FE"));
         liveBtn.setTextSize(12f);
-        liveBtn.setTypeface(null, Typeface.BOLD);
-        liveBtn.setPadding(dp(a, 12), dp(a, 6), dp(a, 12), dp(a, 6));
-        liveBtn.setBackground(neonPill(Color.parseColor("#CC0D1B2A"), Color.parseColor("#38BDF8"), 20, a));
+        liveBtn.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
+        liveBtn.setPadding(dp(a, 14), dp(a, 6), dp(a, 14), dp(a, 6));
+        liveBtn.setBackground(glassPill(Color.parseColor("#CC0A192F"), Color.parseColor("#38BDF8"), 20, a));
         liveBtn.setOnClickListener(v -> openLive(a));
 
         TextView gemsBtn = new TextView(a);
-        gemsBtn.setText("💎 Gems");
+        gemsBtn.setText("Gems");
         gemsBtn.setTextColor(Color.parseColor("#F3E8FF"));
         gemsBtn.setTextSize(12f);
-        gemsBtn.setTypeface(null, Typeface.BOLD);
-        gemsBtn.setPadding(dp(a, 12), dp(a, 6), dp(a, 12), dp(a, 6));
-        gemsBtn.setBackground(neonPill(Color.parseColor("#CC1A102B"), Color.parseColor("#A855F7"), 20, a));
+        gemsBtn.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
+        gemsBtn.setPadding(dp(a, 14), dp(a, 6), dp(a, 14), dp(a, 6));
+        gemsBtn.setBackground(glassPill(Color.parseColor("#CC160D29"), Color.parseColor("#A855F7"), 20, a));
         LinearLayout.LayoutParams gp = new LinearLayout.LayoutParams(-2, -2);
         gp.leftMargin = dp(a, 8);
         gemsBtn.setLayoutParams(gp);
@@ -129,26 +123,21 @@ public class LiveGemma {
         final Dialog d = new Dialog(a, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
         LinearLayout root = new LinearLayout(a);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(Color.parseColor("#090D16"));
+        root.setBackgroundColor(Color.parseColor("#070B14"));
         root.setPadding(dp(a, 18), dp(a, 24), dp(a, 18), dp(a, 18));
 
         LinearLayout header = new LinearLayout(a);
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
         TextView title = new TextView(a);
-        title.setText("💎 Gems · IA Personalizada");
+        title.setText("Gems · IA Personalizada");
         title.setTextColor(Color.WHITE);
         title.setTextSize(19f);
-        title.setTypeface(null, Typeface.BOLD);
-        LinearLayout.LayoutParams tp = new LinearLayout.LayoutParams(0, -2, 1f);
-        title.setLayoutParams(tp);
+        title.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
+        title.setLayoutParams(new LinearLayout.LayoutParams(0, -2, 1f));
 
-        TextView close = new TextView(a);
-        close.setText("✕");
-        close.setTextColor(Color.parseColor("#94A3B8"));
-        close.setTextSize(18f);
-        close.setPadding(dp(a, 12), dp(a, 6), dp(a, 12), dp(a, 6));
-        close.setBackground(neonCircle(Color.parseColor("#1E293B"), Color.parseColor("#334155"), a));
+        VectorIconBtn close = new VectorIconBtn(a, 2, Color.parseColor("#141C2B"), Color.parseColor("#334155"));
+        close.setLayoutParams(new LinearLayout.LayoutParams(dp(a, 42), dp(a, 42)));
         close.setOnClickListener(v -> d.dismiss());
         header.addView(title);
         header.addView(close);
@@ -180,19 +169,19 @@ public class LiveGemma {
 
             LinearLayout card = new LinearLayout(a);
             card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(dp(a, 14), dp(a, 12), dp(a, 14), dp(a, 12));
-            card.setBackground(neonPill(
-                Color.parseColor(isAct ? "#172544" : "#111827"),
-                Color.parseColor(isAct ? "#38BDF8" : "#263248"), 16, a));
+            card.setPadding(dp(a, 16), dp(a, 14), dp(a, 16), dp(a, 14));
+            card.setBackground(glassPill(
+                Color.parseColor(isAct ? "#13223D" : "#0F1623"),
+                Color.parseColor(isAct ? "#38BDF8" : "#1E293B"), 16, a));
             LinearLayout.LayoutParams cp = new LinearLayout.LayoutParams(-1, -2);
             cp.bottomMargin = dp(a, 10);
             card.setLayoutParams(cp);
 
             TextView tvN = new TextView(a);
-            tvN.setText((isAct ? "✦ " : "◇ ") + gName + (isAct ? "  (Activo)" : ""));
+            tvN.setText(gName + (isAct ? "  · Activo" : ""));
             tvN.setTextColor(isAct ? Color.parseColor("#7DD3FC") : Color.WHITE);
             tvN.setTextSize(15f);
-            tvN.setTypeface(null, Typeface.BOLD);
+            tvN.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
 
             TextView tvP = new TextView(a);
             tvP.setText(gPrompt);
@@ -215,9 +204,9 @@ public class LiveGemma {
         addBtn.setGravity(Gravity.CENTER);
         addBtn.setTextColor(Color.WHITE);
         addBtn.setTextSize(14f);
-        addBtn.setTypeface(null, Typeface.BOLD);
-        addBtn.setPadding(dp(a, 16), dp(a, 12), dp(a, 16), dp(a, 12));
-        addBtn.setBackground(neonPill(Color.parseColor("#2E1065"), Color.parseColor("#C084FC"), 24, a));
+        addBtn.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
+        addBtn.setPadding(dp(a, 16), dp(a, 13), dp(a, 16), dp(a, 13));
+        addBtn.setBackground(glassPill(Color.parseColor("#24124D"), Color.parseColor("#A855F7"), 24, a));
         LinearLayout.LayoutParams ap = new LinearLayout.LayoutParams(-1, -2);
         ap.topMargin = dp(a, 10);
         addBtn.setLayoutParams(ap);
@@ -262,28 +251,34 @@ public class LiveGemma {
     }
 
     public static void openLive(final MainActivity a) {
+        if (a.checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            a.requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 904);
+            Toast.makeText(a, "Acepta el permiso de micrófono y vuelve a tocar Live", Toast.LENGTH_LONG).show();
+            return;
+        }
+
         final Dialog d = new Dialog(a, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
         d.requestWindowFeature(Window.FEATURE_NO_TITLE);
 
         FrameLayout root = new FrameLayout(a);
-        root.setBackgroundColor(Color.parseColor("#060A14"));
+        root.setBackgroundColor(Color.parseColor("#04070F"));
 
-        final NeonOrbView orb = new NeonOrbView(a);
-        root.addView(orb, new FrameLayout.LayoutParams(-1, -1));
+        final GeminiAuroraView aurora = new GeminiAuroraView(a);
+        root.addView(aurora, new FrameLayout.LayoutParams(-1, -1));
 
         LinearLayout ui = new LinearLayout(a);
         ui.setOrientation(LinearLayout.VERTICAL);
         ui.setGravity(Gravity.CENTER_HORIZONTAL);
-        ui.setPadding(dp(a, 20), dp(a, 34), dp(a, 20), dp(a, 32));
+        ui.setPadding(dp(a, 22), dp(a, 38), dp(a, 22), dp(a, 36));
 
         final JSONObject gem = getActiveGem(a);
         final TextView topBadge = new TextView(a);
-        topBadge.setText("✦ Live Gemma · " + gem.optString("name", "Sofía"));
-        topBadge.setTextColor(Color.parseColor("#BAE6FD"));
+        topBadge.setText("Live  ·  " + gem.optString("name", "Sofía"));
+        topBadge.setTextColor(Color.parseColor("#E0F2FE"));
         topBadge.setTextSize(13f);
-        topBadge.setTypeface(null, Typeface.BOLD);
-        topBadge.setPadding(dp(a, 14), dp(a, 7), dp(a, 14), dp(a, 7));
-        topBadge.setBackground(neonPill(Color.parseColor("#990F172A"), Color.parseColor("#38BDF8"), 22, a));
+        topBadge.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
+        topBadge.setPadding(dp(a, 18), dp(a, 8), dp(a, 18), dp(a, 8));
+        topBadge.setBackground(glassPill(Color.parseColor("#66101B2E"), Color.parseColor("#38BDF8"), 24, a));
         topBadge.setOnClickListener(v -> { d.dismiss(); openGems(a); });
         ui.addView(topBadge);
 
@@ -291,11 +286,12 @@ public class LiveGemma {
         ui.addView(spacer, new LinearLayout.LayoutParams(-1, 0, 1f));
 
         final TextView statusTv = new TextView(a);
-        statusTv.setText("Toca el micrófono para hablar en italiano");
-        statusTv.setTextColor(Color.parseColor("#E2E8F0"));
-        statusTv.setTextSize(16f);
+        statusTv.setText("Escuchando en italiano...");
+        statusTv.setTextColor(Color.parseColor("#F1F5F9"));
+        statusTv.setTextSize(17f);
+        statusTv.setTypeface(Typeface.SANS_SERIF, Typeface.NORMAL);
         statusTv.setGravity(Gravity.CENTER);
-        statusTv.setPadding(dp(a, 12), dp(a, 10), dp(a, 12), dp(a, 26));
+        statusTv.setPadding(dp(a, 14), dp(a, 12), dp(a, 14), dp(a, 34));
         ui.addView(statusTv);
 
         LinearLayout controls = new LinearLayout(a);
@@ -310,42 +306,47 @@ public class LiveGemma {
             @Override public void run() {
                 if (!d.isShowing() || paused[0]) return;
                 try {
-                    if (sr[0] == null) sr[0] = SpeechRecognizer.createSpeechRecognizer(a);
+                    if (sr[0] != null) { try { sr[0].destroy(); } catch (Exception ignored) {} }
+                    sr[0] = SpeechRecognizer.createSpeechRecognizer(a);
                     Intent in = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
                     in.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
                     in.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "it-IT");
-                    in.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
                     in.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
-                    orb.setMode(1);
+                    in.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1);
+                    aurora.setMode(1);
                     statusTv.setText("Escuchando...");
                     sr[0].setRecognitionListener(new RecognitionListener() {
-                        @Override public void onReadyForSpeech(Bundle b) {}
-                        @Override public void onBeginningOfSpeech() { orb.setMode(2); }
-                        @Override public void onRmsChanged(float rms) { orb.setLevel(rms); }
+                        @Override public void onReadyForSpeech(Bundle b) { aurora.setMode(1); }
+                        @Override public void onBeginningOfSpeech() { aurora.setMode(2); }
+                        @Override public void onRmsChanged(float rms) { aurora.setLevel(rms); }
                         @Override public void onBufferReceived(byte[] b) {}
-                        @Override public void onEndOfSpeech() { orb.setMode(3); statusTv.setText("Pensando con Gemma..."); }
+                        @Override public void onEndOfSpeech() { aurora.setMode(3); statusTv.setText("Pensando..."); }
                         @Override public void onError(int err) {
-                            orb.setMode(0);
-                            statusTv.setText("Toca 🎙 para hablar de nuevo");
+                            aurora.setMode(0);
+                            if (err == SpeechRecognizer.ERROR_NO_MATCH || err == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
+                                statusTv.setText("No te escuché. Toca el micrófono.");
+                            } else {
+                                statusTv.setText("Toca el micrófono para hablar (código " + err + ")");
+                            }
                         }
                         @Override public void onPartialResults(Bundle b) {
                             ArrayList<String> list = b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                            if (list != null && !list.isEmpty()) statusTv.setText("\"" + list.get(0) + "\"");
+                            if (list != null && !list.isEmpty()) statusTv.setText(list.get(0));
                         }
                         @Override public void onResults(Bundle b) {
                             ArrayList<String> list = b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                            if (list == null || list.isEmpty()) { orb.setMode(0); return; }
+                            if (list == null || list.isEmpty()) { aurora.setMode(0); return; }
                             String said = list.get(0);
-                            statusTv.setText("Tú: " + said + "\n\nSofía está respondiendo...");
-                            orb.setMode(3);
+                            statusTv.setText(said + "\n\nSofía está respondiendo...");
+                            aurora.setMode(3);
                             JSONObject act = getActiveGem(a);
                             String fullPrompt = "[GEM: " + act.optString("name") + " - " + act.optString("prompt")
-                                + "] [MODO LIVE: Responde en italiano natural en máximo 2 frases cortas, como en una llamada real.]\nUsuario dice: " + said;
+                                + "] [MODO LIVE: Responde en italiano natural en máximo 2 frases cortas.]\nUsuario: " + said;
                             sendToGemma(a, fullPrompt);
                             h.postDelayed(() -> {
                                 if (d.isShowing() && !paused[0]) {
-                                    orb.setMode(0);
-                                    statusTv.setText("Toca 🎙 cuando Sofía termine de hablar");
+                                    aurora.setMode(0);
+                                    statusTv.setText("Toca el micrófono cuando Sofía termine");
                                 }
                             }, 5500);
                         }
@@ -353,37 +354,39 @@ public class LiveGemma {
                     });
                     sr[0].startListening(in);
                 } catch (Exception e) {
-                    orb.setMode(0);
-                    statusTv.setText("Micrófono no disponible: " + e.getMessage());
+                    aurora.setMode(0);
+                    statusTv.setText("Error de micrófono: " + e.getMessage());
                 }
             }
         };
 
-        TextView pauseBtn = makeCircleBtn(a, "⏸", "#1E293B", "#64748B", 58);
+        final VectorIconBtn pauseBtn = new VectorIconBtn(a, 0, Color.parseColor("#161F30"), Color.parseColor("#334155"));
+        pauseBtn.setLayoutParams(new LinearLayout.LayoutParams(dp(a, 60), dp(a, 60)));
         pauseBtn.setOnClickListener(v -> {
             paused[0] = !paused[0];
-            pauseBtn.setText(paused[0] ? "▶" : "⏸");
+            pauseBtn.setIconType(paused[0] ? 3 : 0);
             if (paused[0]) {
                 try { if (sr[0] != null) sr[0].cancel(); } catch (Exception ignored) {}
-                orb.setMode(0);
-                statusTv.setText("Live en pausa");
+                aurora.setMode(0);
+                statusTv.setText("En pausa");
             } else {
                 startListen.run();
             }
         });
 
-        TextView micBtn = makeCircleBtn(a, "🎙", "#0C4A6E", "#38BDF8", 74);
-        LinearLayout.LayoutParams mp = new LinearLayout.LayoutParams(dp(a, 74), dp(a, 74));
-        mp.leftMargin = dp(a, 22);
-        mp.rightMargin = dp(a, 22);
+        VectorIconBtn micBtn = new VectorIconBtn(a, 1, Color.parseColor("#0D3B66"), Color.parseColor("#38BDF8"));
+        LinearLayout.LayoutParams mp = new LinearLayout.LayoutParams(dp(a, 76), dp(a, 76));
+        mp.leftMargin = dp(a, 24);
+        mp.rightMargin = dp(a, 24);
         micBtn.setLayoutParams(mp);
         micBtn.setOnClickListener(v -> {
             paused[0] = false;
-            pauseBtn.setText("⏸");
+            pauseBtn.setIconType(0);
             startListen.run();
         });
 
-        TextView hangBtn = makeCircleBtn(a, "✕", "#7F1D1D", "#F87171", 58);
+        VectorIconBtn hangBtn = new VectorIconBtn(a, 2, Color.parseColor("#7F1D1D"), Color.parseColor("#EF4444"));
+        hangBtn.setLayoutParams(new LinearLayout.LayoutParams(dp(a, 60), dp(a, 60)));
         hangBtn.setOnClickListener(v -> d.dismiss());
 
         controls.addView(pauseBtn);
@@ -393,23 +396,12 @@ public class LiveGemma {
 
         root.addView(ui, new FrameLayout.LayoutParams(-1, -1));
         d.setOnDismissListener(di -> {
-            orb.stop();
+            aurora.stop();
             try { if (sr[0] != null) sr[0].destroy(); } catch (Exception ignored) {}
         });
         d.setContentView(root);
         d.show();
-        h.postDelayed(startListen, 350);
-    }
-
-    private static TextView makeCircleBtn(Context c, String txt, String bg, String stroke, int sizeDp) {
-        TextView b = new TextView(c);
-        b.setText(txt);
-        b.setTextColor(Color.WHITE);
-        b.setTextSize(sizeDp > 65 ? 24f : 19f);
-        b.setGravity(Gravity.CENTER);
-        b.setBackground(neonCircle(Color.parseColor(bg), Color.parseColor(stroke), c));
-        b.setLayoutParams(new LinearLayout.LayoutParams(dp(c, sizeDp), dp(c, sizeDp)));
-        return b;
+        h.postDelayed(startListen, 300);
     }
 
     private static void sendToGemma(MainActivity a, String prompt) {
@@ -423,44 +415,107 @@ public class LiveGemma {
         }
     }
 
-    static class NeonOrbView extends View {
+    // Boton circular minimalista con icono vectorial blanco puro (sin emojis)
+    static class VectorIconBtn extends View {
+        private int iconType; // 0=pause, 1=mic, 2=close, 3=play
+        private final Paint bgP = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint stP = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint icP = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        VectorIconBtn(Context c, int type, int bg, int stroke) {
+            super(c);
+            this.iconType = type;
+            bgP.setColor(bg);
+            stP.setColor(stroke);
+            stP.setStyle(Paint.Style.STROKE);
+            stP.setStrokeWidth(dp(c, 1.5f));
+            icP.setColor(Color.WHITE);
+            icP.setStrokeCap(Paint.Cap.ROUND);
+            icP.setStrokeJoin(Paint.Join.ROUND);
+        }
+
+        void setIconType(int t) { iconType = t; invalidate(); }
+
+        @Override protected void onDraw(Canvas cv) {
+            float cx = getWidth() * 0.5f, cy = getHeight() * 0.5f, r = Math.min(cx, cy) - stP.getStrokeWidth();
+            cv.drawCircle(cx, cy, r, bgP);
+            cv.drawCircle(cx, cy, r, stP);
+            float u = r * 0.36f;
+            if (iconType == 0) { // Pause
+                icP.setStyle(Paint.Style.FILL);
+                cv.drawRoundRect(cx - u * 0.7f, cy - u, cx - u * 0.22f, cy + u, 4, 4, icP);
+                cv.drawRoundRect(cx + u * 0.22f, cy - u, cx + u * 0.7f, cy + u, 4, 4, icP);
+            } else if (iconType == 1) { // Mic
+                icP.setStyle(Paint.Style.STROKE);
+                icP.setStrokeWidth(r * 0.08f);
+                cv.drawRoundRect(cx - u * 0.42f, cy - u * 1.05f, cx + u * 0.42f, cy + u * 0.15f, u * 0.42f, u * 0.42f, icP);
+                cv.drawArc(cx - u * 0.85f, cy - u * 0.55f, cx + u * 0.85f, cy + u * 0.65f, 0, 180, false, icP);
+                cv.drawLine(cx, cy + u * 0.65f, cx, cy + u * 1.1f, icP);
+                cv.drawLine(cx - u * 0.45f, cy + u * 1.1f, cx + u * 0.45f, cy + u * 1.1f, icP);
+            } else if (iconType == 2) { // Close X
+                icP.setStyle(Paint.Style.STROKE);
+                icP.setStrokeWidth(r * 0.09f);
+                cv.drawLine(cx - u * 0.7f, cy - u * 0.7f, cx + u * 0.7f, cy + u * 0.7f, icP);
+                cv.drawLine(cx + u * 0.7f, cy - u * 0.7f, cx - u * 0.7f, cy + u * 0.7f, icP);
+            } else if (iconType == 3) { // Play
+                icP.setStyle(Paint.Style.FILL);
+                Path p = new Path();
+                p.moveTo(cx - u * 0.5f, cy - u * 0.9f);
+                p.lineTo(cx + u * 0.9f, cy);
+                p.lineTo(cx - u * 0.5f, cy + u * 0.9f);
+                p.close();
+                cv.drawPath(p, icP);
+            }
+        }
+    }
+
+    // Aurora fluida estilo Gemini Live en la parte inferior
+    static class GeminiAuroraView extends View {
         private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private float phase = 0f, level = 0f;
+        private final Path path = new Path();
+        private float t = 0f, smoothLvl = 0.15f, targetLvl = 0.15f;
         private int mode = 0; // 0=idle, 1=listen, 2=voice, 3=think
         private boolean alive = true;
 
-        NeonOrbView(Context c) { super(c); }
-        void setMode(int m) { mode = m; }
-        void setLevel(float rms) { level = Math.max(0f, Math.min(1f, rms / 10f)); }
+        GeminiAuroraView(Context c) { super(c); }
+        void setMode(int m) { mode = m; if (m == 0) targetLvl = 0.08f; else if (m == 1) targetLvl = 0.28f; else if (m == 3) targetLvl = 0.55f; }
+        void setLevel(float rms) { targetLvl = Math.max(0.2f, Math.min(1f, (rms + 2f) / 10f)); }
         void stop() { alive = false; }
 
         @Override protected void onDraw(Canvas cv) {
             int w = getWidth(), h = getHeight();
-            float cx = w * 0.5f, cy = h * 0.42f;
-            float baseR = Math.min(w, h) * 0.22f;
-            phase += (mode == 3 ? 0.08f : 0.035f);
-            float pulse = (float) Math.sin(phase) * (mode == 2 ? 18f + level * 26f : 10f);
+            t += (mode == 3 ? 0.065f : 0.032f);
+            smoothLvl += (targetLvl - smoothLvl) * 0.12f;
 
-            p.setShader(new RadialGradient(cx, cy, baseR * 2.2f,
-                new int[]{mode == 3 ? 0x55A855F7 : 0x5538BDF8, 0x220EA5E9, 0x00000000},
-                null, Shader.TileMode.CLAMP));
-            cv.drawCircle(cx, cy, baseR * 2.2f + pulse, p);
+            // Resplandor inferior tipo Gemini Live
+            float glowY = h * 0.88f;
+            float glowR = Math.max(w, h) * (0.52f + smoothLvl * 0.18f);
+            int c1 = (mode == 3) ? 0x668B5CF6 : 0x660EA5E9;
+            int c2 = (mode == 2) ? 0x4422D3EE : 0x333B82F6;
+            p.setShader(new RadialGradient(w * 0.5f, glowY, glowR, new int[]{c1, c2, 0x00000000}, null, Shader.TileMode.CLAMP));
+            cv.drawRect(0, h * 0.35f, w, h, p);
 
-            p.setShader(new LinearGradient(cx - baseR, cy - baseR, cx + baseR, cy + baseR,
-                mode == 3 ? 0xFFC084FC : 0xFF38BDF8,
-                mode == 2 ? 0xFF22D3EE : 0xFF6366F1,
-                Shader.TileMode.CLAMP));
-            p.setStyle(Paint.Style.STROKE);
-            p.setStrokeWidth(6f);
-            cv.drawCircle(cx, cy, baseR + pulse * 0.6f, p);
-
-            p.setStrokeWidth(3f);
-            p.setAlpha(150);
-            cv.drawCircle(cx, cy, baseR * 0.78f - pulse * 0.4f, p);
-            p.setStyle(Paint.Style.FILL);
-            p.setAlpha(255);
+            // 3 ondas fluidas superpuestas
+            drawWave(cv, w, h, h * 0.72f, 26f + smoothLvl * 48f, 1.3f, t, 0xAA38BDF8, 0x0038BDF8);
+            drawWave(cv, w, h, h * 0.76f, 22f + smoothLvl * 42f, 1.8f, -t * 1.2f, 0x99818CF8, 0x00818CF8);
+            drawWave(cv, w, h, h * 0.80f, 18f + smoothLvl * 34f, 2.3f, t * 1.5f, 0x8822D3EE, 0x0022D3EE);
 
             if (alive) postInvalidateOnAnimation();
+        }
+
+        private void drawWave(Canvas cv, int w, int h, float baseY, float amp, float freq, float phase, int topCol, int botCol) {
+            path.reset();
+            path.moveTo(0, h);
+            for (int x = 0; x <= w; x += 18) {
+                float nx = (float) x / w;
+                float env = (float) Math.sin(nx * Math.PI);
+                float y = baseY + (float) Math.sin(nx * Math.PI * 2f * freq + phase) * amp * env;
+                path.lineTo(x, y);
+            }
+            path.lineTo(w, h);
+            path.close();
+            p.setShader(new LinearGradient(0, baseY - amp, 0, h, topCol, botCol, Shader.TileMode.CLAMP));
+            cv.drawPath(path, p);
         }
     }
 }
