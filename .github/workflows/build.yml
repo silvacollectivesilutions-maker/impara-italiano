@@ -48,10 +48,6 @@ jobs:
           custom_glb = Path("overrides/sofia.glb")
           fondos_dir = Path("fondos") if Path("fondos").exists() else Path("overrides/fondos")
           desk_file = fondos_dir / "desk.jpg"
-          if not desk_file.exists():
-              sc = sorted(fondos_dir.glob("Screenshot_*"))
-              if sc:
-                  desk_file = sc[0]
           chiara_file = fondos_dir / "chiara.jpg"
           if not chiara_file.exists() and (fondos_dir / "1795271118941.jpg").exists():
               chiara_file = fondos_dir / "1795271118941.jpg"
