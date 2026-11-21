@@ -290,7 +290,6 @@ public class LiveGemma {
         topBadge.setOnClickListener(v -> { d.dismiss(); openGems(a); });
         ui.addView(topBadge);
 
-        // Retrato fotorealista circular de la tutora Chiara
         LinearLayout tutorCenter = new LinearLayout(a);
         tutorCenter.setOrientation(LinearLayout.VERTICAL);
         tutorCenter.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -319,7 +318,6 @@ public class LiveGemma {
         tutorCenter.addView(tutorSub);
         ui.addView(tutorCenter);
 
-        // Caja de subtítulos en vivo (muestra lo que dices y lo que responde Chiara)
         ScrollView replyScroll = new ScrollView(a);
         LinearLayout.LayoutParams rsp = new LinearLayout.LayoutParams(-1, 0, 1f);
         rsp.topMargin = dp(a, 10);
@@ -553,7 +551,7 @@ public class LiveGemma {
             ringP.setColor(Color.parseColor("#38BDF8"));
             txtP.setColor(Color.parseColor("#E0F2FE"));
             txtP.setTextAlign(Paint.Align.CENTER);
-            txtP.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
+            txtP.setTypeface(Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD));
         }
 
         @Override protected void onDraw(Canvas cv) {
