@@ -25,6 +25,7 @@ import android.speech.SpeechRecognizer;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.Window;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -38,14 +39,14 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class LiveGemma {
-    private static final String PREF = "impara_gems_v1";
+    private static final String PREF = "impara_gems_v2";
     private static final String KEY_LIST = "gems_json";
     private static final String KEY_ACTIVE = "active_gem";
 
     public static GradientDrawable glassPill(int fill, int stroke, int radiusDp, Context c) {
         GradientDrawable gd = new GradientDrawable();
         gd.setColor(fill);
-        gd.setStroke(dp(c, 1f), stroke);
+        gd.setStroke(dp(c, 1.2f), stroke);
         gd.setCornerRadius(dp(c, radiusDp));
         return gd;
     }
@@ -94,11 +95,11 @@ public class LiveGemma {
             try { return new JSONArray(raw); } catch (Exception ignored) {}
         }
         JSONArray arr = new JSONArray();
-        addGemObj(arr, "Profesora Sofía", "Eres Sofía, profesora de italiano amable y paciente. Responde en italiano natural y corrige errores con suavidad.");
-        addGemObj(arr, "Mesero en Roma", "Eres un mesero simpático en una trattoria de Roma. Habla solo en italiano cotidiano de restaurante.");
-        addGemObj(arr, "Corrector Estricto", "Corrige cada error gramatical o de vocabulario en español breve y luego muestra cómo lo diría un italiano nativo.");
-        addGemObj(arr, "Amigo Italiano", "Eres un amigo italiano joven y relajado. Usa expresiones reales de la calle (allora, cioè, dai, magari).");
-        addGemObj(arr, "Entrevista / Trabajo", "Simula una entrevista de trabajo formal en italiano en turismo/hospitalidad. Haz preguntas claras una por una.");
+        addGemObj(arr, "Chiara · Tutora Live", "Eres Chiara, una tutora italiana joven, dinámica y natural de Milán. Conversa en italiano fluido en respuestas cortas tipo llamada real y corrige con amabilidad.");
+        addGemObj(arr, "Mesero en Roma", "Eres Marco, mesero en una trattoria de Roma. Habla solo en italiano cotidiano de restaurante.");
+        addGemObj(arr, "Corrector Estricto", "Corrige cada error gramatical o de pronunciación en español breve y luego di cómo lo diría un italiano nativo.");
+        addGemObj(arr, "Amigo Italiano", "Eres Luca, un amigo italiano relajado. Usa expresiones reales de la calle (allora, cioè, dai, magari).");
+        addGemObj(arr, "Entrevista / Trabajo", "Simula una entrevista de trabajo formal en italiano en turismo y cruceros. Haz una pregunta clara a la vez.");
         sp.edit().putString(KEY_LIST, arr.toString()).apply();
         return arr;
     }
@@ -130,7 +131,7 @@ public class LiveGemma {
         header.setOrientation(LinearLayout.HORIZONTAL);
         header.setGravity(Gravity.CENTER_VERTICAL);
         TextView title = new TextView(a);
-        title.setText("Gems · IA Personalizada");
+        title.setText("Gems · Tutores Live");
         title.setTextColor(Color.WHITE);
         title.setTextSize(19f);
         title.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
@@ -144,7 +145,7 @@ public class LiveGemma {
         root.addView(header);
 
         TextView sub = new TextView(a);
-        sub.setText("Elige una personalidad offline para Gemma o crea la tuya:");
+        sub.setText("Elige tu tutora o personalidad offline para Live Gemma:");
         sub.setTextColor(Color.parseColor("#94A3B8"));
         sub.setTextSize(13f);
         sub.setPadding(0, dp(a, 8), 0, dp(a, 14));
@@ -193,7 +194,7 @@ public class LiveGemma {
             card.addView(tvP);
             card.setOnClickListener(v -> {
                 a.getSharedPreferences(PREF, Context.MODE_PRIVATE).edit().putInt(KEY_ACTIVE, idx).apply();
-                Toast.makeText(a, "Gem activo: " + gName, Toast.LENGTH_SHORT).show();
+                Toast.makeText(a, "Tutor activo: " + gName, Toast.LENGTH_SHORT).show();
                 d.dismiss();
             });
             list.addView(card);
@@ -225,7 +226,7 @@ public class LiveGemma {
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(dp(a, 18), dp(a, 14), dp(a, 18), dp(a, 8));
         final EditText etName = new EditText(a);
-        etName.setHint("Nombre del Gem (ej. Guía en Venecia)");
+        etName.setHint("Nombre del Gem (ej. Elena · Guía en Venecia)");
         final EditText etPrompt = new EditText(a);
         etPrompt.setHint("Instrucciones (ej. Habla italiano lento y corrígeme)");
         etPrompt.setMinLines(3);
@@ -272,8 +273,10 @@ public class LiveGemma {
         ui.setPadding(dp(a, 22), dp(a, 38), dp(a, 22), dp(a, 36));
 
         final JSONObject gem = getActiveGem(a);
+        final String tutorName = gem.optString("name", "Chiara · Tutora Live");
+
         final TextView topBadge = new TextView(a);
-        topBadge.setText("Live  ·  " + gem.optString("name", "Sofía"));
+        topBadge.setText("Live Gemma  ·  " + tutorName);
         topBadge.setTextColor(Color.parseColor("#E0F2FE"));
         topBadge.setTextSize(13f);
         topBadge.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
@@ -282,8 +285,39 @@ public class LiveGemma {
         topBadge.setOnClickListener(v -> { d.dismiss(); openGems(a); });
         ui.addView(topBadge);
 
-        View spacer = new View(a);
-        ui.addView(spacer, new LinearLayout.LayoutParams(-1, 0, 1f));
+        // Emblema central de la nueva tutora Live
+        LinearLayout tutorCenter = new LinearLayout(a);
+        tutorCenter.setOrientation(LinearLayout.VERTICAL);
+        tutorCenter.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams tcp = new LinearLayout.LayoutParams(-1, 0, 1f);
+        tutorCenter.setLayoutParams(tcp);
+
+        TextView avatarRing = new TextView(a);
+        String initial = tutorName.isEmpty() ? "C" : tutorName.substring(0, 1).toUpperCase();
+        avatarRing.setText(initial);
+        avatarRing.setTextColor(Color.parseColor("#E0F2FE"));
+        avatarRing.setTextSize(34f);
+        avatarRing.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
+        avatarRing.setGravity(Gravity.CENTER);
+        avatarRing.setBackground(glassPill(Color.parseColor("#33102A4A"), Color.parseColor("#38BDF8"), 50, a));
+        avatarRing.setLayoutParams(new LinearLayout.LayoutParams(dp(a, 96), dp(a, 96)));
+
+        TextView tutorTitle = new TextView(a);
+        tutorTitle.setText(tutorName);
+        tutorTitle.setTextColor(Color.WHITE);
+        tutorTitle.setTextSize(18f);
+        tutorTitle.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
+        tutorTitle.setPadding(0, dp(a, 14), 0, dp(a, 4));
+
+        TextView tutorSub = new TextView(a);
+        tutorSub.setText("Conversación en vivo · 100% Offline");
+        tutorSub.setTextColor(Color.parseColor("#94A3B8"));
+        tutorSub.setTextSize(12.5f);
+
+        tutorCenter.addView(avatarRing);
+        tutorCenter.addView(tutorTitle);
+        tutorCenter.addView(tutorSub);
+        ui.addView(tutorCenter);
 
         final TextView statusTv = new TextView(a);
         statusTv.setText("Escuchando en italiano...");
@@ -323,11 +357,7 @@ public class LiveGemma {
                         @Override public void onEndOfSpeech() { aurora.setMode(3); statusTv.setText("Pensando..."); }
                         @Override public void onError(int err) {
                             aurora.setMode(0);
-                            if (err == SpeechRecognizer.ERROR_NO_MATCH || err == SpeechRecognizer.ERROR_SPEECH_TIMEOUT) {
-                                statusTv.setText("No te escuché. Toca el micrófono.");
-                            } else {
-                                statusTv.setText("Toca el micrófono para hablar (código " + err + ")");
-                            }
+                            statusTv.setText("Toca el micrófono para hablar");
                         }
                         @Override public void onPartialResults(Bundle b) {
                             ArrayList<String> list = b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
@@ -337,16 +367,16 @@ public class LiveGemma {
                             ArrayList<String> list = b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                             if (list == null || list.isEmpty()) { aurora.setMode(0); return; }
                             String said = list.get(0);
-                            statusTv.setText(said + "\n\nSofía está respondiendo...");
+                            statusTv.setText(said + "\n\n" + tutorName + " está respondiendo...");
                             aurora.setMode(3);
                             JSONObject act = getActiveGem(a);
                             String fullPrompt = "[GEM: " + act.optString("name") + " - " + act.optString("prompt")
                                 + "] [MODO LIVE: Responde en italiano natural en máximo 2 frases cortas.]\nUsuario: " + said;
-                            sendToGemma(a, fullPrompt);
+                            sendAndAutoSubmit(a, fullPrompt, h);
                             h.postDelayed(() -> {
                                 if (d.isShowing() && !paused[0]) {
                                     aurora.setMode(0);
-                                    statusTv.setText("Toca el micrófono cuando Sofía termine");
+                                    statusTv.setText("Toca el micrófono para continuar");
                                 }
                             }, 5500);
                         }
@@ -404,18 +434,43 @@ public class LiveGemma {
         h.postDelayed(startListen, 300);
     }
 
-    private static void sendToGemma(MainActivity a, String prompt) {
+    private static void sendAndAutoSubmit(final MainActivity a, String prompt, Handler h) {
         try {
             Class<?> cls = Class.forName("com.germansilva.italianomaestro.StudyDesk");
             Method m = cls.getDeclaredMethod("ask", MainActivity.class, String.class);
             m.setAccessible(true);
             m.invoke(null, a, prompt);
+            // Pulsa automáticamente el botón Enviar junto al EditText para que no se quede esperando
+            h.postDelayed(() -> clickSendButton(a.getWindow().getDecorView()), 180);
         } catch (Exception e) {
             Toast.makeText(a, "Error enviando a Gemma: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
-    // Boton circular minimalista con icono vectorial blanco puro (sin emojis)
+    private static boolean clickSendButton(View v) {
+        if (v instanceof ViewGroup) {
+            ViewGroup vg = (ViewGroup) v;
+            boolean hasEdit = false;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                if (vg.getChildAt(i) instanceof EditText) {
+                    hasEdit = true;
+                    break;
+                }
+            }
+            if (hasEdit && vg.getChildCount() > 1) {
+                View last = vg.getChildAt(vg.getChildCount() - 1);
+                if (last.isClickable() && last.getVisibility() == View.VISIBLE) {
+                    last.performClick();
+                    return true;
+                }
+            }
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                if (clickSendButton(vg.getChildAt(i))) return true;
+            }
+        }
+        return false;
+    }
+
     static class VectorIconBtn extends View {
         private int iconType; // 0=pause, 1=mic, 2=close, 3=play
         private final Paint bgP = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -441,23 +496,23 @@ public class LiveGemma {
             cv.drawCircle(cx, cy, r, bgP);
             cv.drawCircle(cx, cy, r, stP);
             float u = r * 0.36f;
-            if (iconType == 0) { // Pause
+            if (iconType == 0) {
                 icP.setStyle(Paint.Style.FILL);
                 cv.drawRoundRect(cx - u * 0.7f, cy - u, cx - u * 0.22f, cy + u, 4, 4, icP);
                 cv.drawRoundRect(cx + u * 0.22f, cy - u, cx + u * 0.7f, cy + u, 4, 4, icP);
-            } else if (iconType == 1) { // Mic
+            } else if (iconType == 1) {
                 icP.setStyle(Paint.Style.STROKE);
                 icP.setStrokeWidth(r * 0.08f);
                 cv.drawRoundRect(cx - u * 0.42f, cy - u * 1.05f, cx + u * 0.42f, cy + u * 0.15f, u * 0.42f, u * 0.42f, icP);
                 cv.drawArc(cx - u * 0.85f, cy - u * 0.55f, cx + u * 0.85f, cy + u * 0.65f, 0, 180, false, icP);
                 cv.drawLine(cx, cy + u * 0.65f, cx, cy + u * 1.1f, icP);
                 cv.drawLine(cx - u * 0.45f, cy + u * 1.1f, cx + u * 0.45f, cy + u * 1.1f, icP);
-            } else if (iconType == 2) { // Close X
+            } else if (iconType == 2) {
                 icP.setStyle(Paint.Style.STROKE);
                 icP.setStrokeWidth(r * 0.09f);
                 cv.drawLine(cx - u * 0.7f, cy - u * 0.7f, cx + u * 0.7f, cy + u * 0.7f, icP);
                 cv.drawLine(cx + u * 0.7f, cy - u * 0.7f, cx - u * 0.7f, cy + u * 0.7f, icP);
-            } else if (iconType == 3) { // Play
+            } else if (iconType == 3) {
                 icP.setStyle(Paint.Style.FILL);
                 Path p = new Path();
                 p.moveTo(cx - u * 0.5f, cy - u * 0.9f);
@@ -469,12 +524,11 @@ public class LiveGemma {
         }
     }
 
-    // Aurora fluida estilo Gemini Live en la parte inferior
     static class GeminiAuroraView extends View {
         private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path path = new Path();
         private float t = 0f, smoothLvl = 0.15f, targetLvl = 0.15f;
-        private int mode = 0; // 0=idle, 1=listen, 2=voice, 3=think
+        private int mode = 0;
         private boolean alive = true;
 
         GeminiAuroraView(Context c) { super(c); }
@@ -487,7 +541,6 @@ public class LiveGemma {
             t += (mode == 3 ? 0.065f : 0.032f);
             smoothLvl += (targetLvl - smoothLvl) * 0.12f;
 
-            // Resplandor inferior tipo Gemini Live
             float glowY = h * 0.88f;
             float glowR = Math.max(w, h) * (0.52f + smoothLvl * 0.18f);
             int c1 = (mode == 3) ? 0x668B5CF6 : 0x660EA5E9;
@@ -495,7 +548,6 @@ public class LiveGemma {
             p.setShader(new RadialGradient(w * 0.5f, glowY, glowR, new int[]{c1, c2, 0x00000000}, null, Shader.TileMode.CLAMP));
             cv.drawRect(0, h * 0.35f, w, h, p);
 
-            // 3 ondas fluidas superpuestas
             drawWave(cv, w, h, h * 0.72f, 26f + smoothLvl * 48f, 1.3f, t, 0xAA38BDF8, 0x0038BDF8);
             drawWave(cv, w, h, h * 0.76f, 22f + smoothLvl * 42f, 1.8f, -t * 1.2f, 0x99818CF8, 0x00818CF8);
             drawWave(cv, w, h, h * 0.80f, 18f + smoothLvl * 34f, 2.3f, t * 1.5f, 0x8822D3EE, 0x0022D3EE);
