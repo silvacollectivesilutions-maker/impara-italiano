@@ -7,9 +7,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.LinearGradient;
+import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RadialGradient;
@@ -33,6 +37,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
+import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import org.json.JSONArray;
@@ -270,7 +275,7 @@ public class LiveGemma {
         LinearLayout ui = new LinearLayout(a);
         ui.setOrientation(LinearLayout.VERTICAL);
         ui.setGravity(Gravity.CENTER_HORIZONTAL);
-        ui.setPadding(dp(a, 22), dp(a, 38), dp(a, 22), dp(a, 36));
+        ui.setPadding(dp(a, 20), dp(a, 34), dp(a, 20), dp(a, 32));
 
         final JSONObject gem = getActiveGem(a);
         final String tutorName = gem.optString("name", "Chiara · Tutora Live");
@@ -285,47 +290,59 @@ public class LiveGemma {
         topBadge.setOnClickListener(v -> { d.dismiss(); openGems(a); });
         ui.addView(topBadge);
 
-        // Emblema central de la nueva tutora Live
+        // Retrato fotorealista circular de la tutora Chiara
         LinearLayout tutorCenter = new LinearLayout(a);
         tutorCenter.setOrientation(LinearLayout.VERTICAL);
-        tutorCenter.setGravity(Gravity.CENTER);
-        LinearLayout.LayoutParams tcp = new LinearLayout.LayoutParams(-1, 0, 1f);
-        tutorCenter.setLayoutParams(tcp);
+        tutorCenter.setGravity(Gravity.CENTER_HORIZONTAL);
+        tutorCenter.setPadding(0, dp(a, 22), 0, dp(a, 12));
 
-        TextView avatarRing = new TextView(a);
         String initial = tutorName.isEmpty() ? "C" : tutorName.substring(0, 1).toUpperCase();
-        avatarRing.setText(initial);
-        avatarRing.setTextColor(Color.parseColor("#E0F2FE"));
-        avatarRing.setTextSize(34f);
-        avatarRing.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
-        avatarRing.setGravity(Gravity.CENTER);
-        avatarRing.setBackground(glassPill(Color.parseColor("#33102A4A"), Color.parseColor("#38BDF8"), 50, a));
-        avatarRing.setLayoutParams(new LinearLayout.LayoutParams(dp(a, 96), dp(a, 96)));
+        TutorPhotoView photoView = new TutorPhotoView(a, "sofia84/chiara.jpg", initial);
+        photoView.setLayoutParams(new LinearLayout.LayoutParams(dp(a, 138), dp(a, 138)));
 
         TextView tutorTitle = new TextView(a);
         tutorTitle.setText(tutorName);
+        tutorTitle.setGravity(Gravity.CENTER);
         tutorTitle.setTextColor(Color.WHITE);
         tutorTitle.setTextSize(18f);
         tutorTitle.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
-        tutorTitle.setPadding(0, dp(a, 14), 0, dp(a, 4));
+        tutorTitle.setPadding(0, dp(a, 12), 0, dp(a, 2));
 
         TextView tutorSub = new TextView(a);
         tutorSub.setText("Conversación en vivo · 100% Offline");
+        tutorSub.setGravity(Gravity.CENTER);
         tutorSub.setTextColor(Color.parseColor("#94A3B8"));
         tutorSub.setTextSize(12.5f);
 
-        tutorCenter.addView(avatarRing);
+        tutorCenter.addView(photoView);
         tutorCenter.addView(tutorTitle);
         tutorCenter.addView(tutorSub);
         ui.addView(tutorCenter);
 
+        // Caja de subtítulos en vivo (muestra lo que dices y lo que responde Chiara)
+        ScrollView replyScroll = new ScrollView(a);
+        LinearLayout.LayoutParams rsp = new LinearLayout.LayoutParams(-1, 0, 1f);
+        rsp.topMargin = dp(a, 10);
+        rsp.bottomMargin = dp(a, 14);
+        replyScroll.setLayoutParams(rsp);
+        replyScroll.setBackground(glassPill(Color.parseColor("#770B1324"), Color.parseColor("#3338BDF8"), 18, a));
+        replyScroll.setPadding(dp(a, 16), dp(a, 14), dp(a, 16), dp(a, 14));
+
+        final TextView replyTv = new TextView(a);
+        replyTv.setText("Ciao! Sono Chiara. Dimmi qualcosa in italiano...");
+        replyTv.setTextColor(Color.parseColor("#F1F5F9"));
+        replyTv.setTextSize(16f);
+        replyTv.setLineSpacing(dp(a, 4), 1f);
+        replyTv.setGravity(Gravity.CENTER_HORIZONTAL);
+        replyScroll.addView(replyTv);
+        ui.addView(replyScroll);
+
         final TextView statusTv = new TextView(a);
-        statusTv.setText("Escuchando en italiano...");
-        statusTv.setTextColor(Color.parseColor("#F1F5F9"));
-        statusTv.setTextSize(17f);
-        statusTv.setTypeface(Typeface.SANS_SERIF, Typeface.NORMAL);
+        statusTv.setText("Escuchando...");
+        statusTv.setTextColor(Color.parseColor("#BAE6FD"));
+        statusTv.setTextSize(13.5f);
         statusTv.setGravity(Gravity.CENTER);
-        statusTv.setPadding(dp(a, 14), dp(a, 12), dp(a, 14), dp(a, 34));
+        statusTv.setPadding(dp(a, 12), dp(a, 4), dp(a, 12), dp(a, 18));
         ui.addView(statusTv);
 
         LinearLayout controls = new LinearLayout(a);
@@ -335,6 +352,27 @@ public class LiveGemma {
         final boolean[] paused = {false};
         final SpeechRecognizer[] sr = {null};
         final Handler h = new Handler(Looper.getMainLooper());
+        final String[] lastChatSnapshot = {extractLatestReply(a.getWindow().getDecorView(), "")};
+
+        final Runnable pollReply = new Runnable() {
+            int ticks = 0;
+            @Override public void run() {
+                if (!d.isShowing()) return;
+                String latest = extractLatestReply(a.getWindow().getDecorView(), lastChatSnapshot[0]);
+                if (latest != null && !latest.isEmpty() && !latest.equals(lastChatSnapshot[0])) {
+                    replyTv.setText(latest);
+                    replyScroll.post(() -> replyScroll.fullScroll(View.FOCUS_DOWN));
+                }
+                ticks++;
+                if (ticks < 45) {
+                    h.postDelayed(this, 600);
+                } else {
+                    ticks = 0;
+                    aurora.setMode(0);
+                    statusTv.setText("Toca el micrófono para continuar");
+                }
+            }
+        };
 
         final Runnable startListen = new Runnable() {
             @Override public void run() {
@@ -361,24 +399,22 @@ public class LiveGemma {
                         }
                         @Override public void onPartialResults(Bundle b) {
                             ArrayList<String> list = b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-                            if (list != null && !list.isEmpty()) statusTv.setText(list.get(0));
+                            if (list != null && !list.isEmpty()) statusTv.setText("Tú: " + list.get(0));
                         }
                         @Override public void onResults(Bundle b) {
                             ArrayList<String> list = b.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                             if (list == null || list.isEmpty()) { aurora.setMode(0); return; }
                             String said = list.get(0);
-                            statusTv.setText(said + "\n\n" + tutorName + " está respondiendo...");
+                            statusTv.setText("Tú: " + said);
+                            replyTv.setText(tutorName + " está pensando...");
                             aurora.setMode(3);
+                            lastChatSnapshot[0] = extractLatestReply(a.getWindow().getDecorView(), "");
                             JSONObject act = getActiveGem(a);
                             String fullPrompt = "[GEM: " + act.optString("name") + " - " + act.optString("prompt")
                                 + "] [MODO LIVE: Responde en italiano natural en máximo 2 frases cortas.]\nUsuario: " + said;
                             sendAndAutoSubmit(a, fullPrompt, h);
-                            h.postDelayed(() -> {
-                                if (d.isShowing() && !paused[0]) {
-                                    aurora.setMode(0);
-                                    statusTv.setText("Toca el micrófono para continuar");
-                                }
-                            }, 5500);
+                            h.removeCallbacks(pollReply);
+                            h.postDelayed(pollReply, 900);
                         }
                         @Override public void onEvent(int t, Bundle b) {}
                     });
@@ -427,11 +463,40 @@ public class LiveGemma {
         root.addView(ui, new FrameLayout.LayoutParams(-1, -1));
         d.setOnDismissListener(di -> {
             aurora.stop();
+            h.removeCallbacksAndMessages(null);
             try { if (sr[0] != null) sr[0].destroy(); } catch (Exception ignored) {}
         });
         d.setContentView(root);
         d.show();
         h.postDelayed(startListen, 300);
+    }
+
+    private static String extractLatestReply(View root, String ignore) {
+        final String[] best = {""};
+        scanTexts(root, best, ignore);
+        return best[0];
+    }
+
+    private static void scanTexts(View v, String[] best, String ignore) {
+        if (v instanceof EditText) return;
+        if (v instanceof TextView) {
+            CharSequence cs = ((TextView) v).getText();
+            if (cs != null) {
+                String t = cs.toString().trim();
+                if (t.length() > 14
+                    && !t.contains("[GEM:")
+                    && !t.contains("Gemma 4")
+                    && !t.equals("Inicio") && !t.equals("Estudiar") && !t.equals("Sofía") && !t.equals("Más")
+                    && !t.equals(ignore)) {
+                    best[0] = t;
+                }
+            }
+        } else if (v instanceof ViewGroup) {
+            ViewGroup vg = (ViewGroup) v;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                scanTexts(vg.getChildAt(i), best, ignore);
+            }
+        }
     }
 
     private static void sendAndAutoSubmit(final MainActivity a, String prompt, Handler h) {
@@ -440,8 +505,7 @@ public class LiveGemma {
             Method m = cls.getDeclaredMethod("ask", MainActivity.class, String.class);
             m.setAccessible(true);
             m.invoke(null, a, prompt);
-            // Pulsa automáticamente el botón Enviar junto al EditText para que no se quede esperando
-            h.postDelayed(() -> clickSendButton(a.getWindow().getDecorView()), 180);
+            h.postDelayed(() -> clickSendButton(a.getWindow().getDecorView()), 200);
         } catch (Exception e) {
             Toast.makeText(a, "Error enviando a Gemma: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
@@ -471,8 +535,52 @@ public class LiveGemma {
         return false;
     }
 
+    static class TutorPhotoView extends View {
+        private Bitmap bmp;
+        private final String fallback;
+        private final Paint imgP = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint ringP = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint txtP = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        TutorPhotoView(Context c, String assetPath, String fallback) {
+            super(c);
+            this.fallback = fallback;
+            try (InputStream is = c.getAssets().open(assetPath)) {
+                bmp = BitmapFactory.decodeStream(is);
+            } catch (Exception ignored) {}
+            ringP.setStyle(Paint.Style.STROKE);
+            ringP.setStrokeWidth(dp(c, 2.5f));
+            ringP.setColor(Color.parseColor("#38BDF8"));
+            txtP.setColor(Color.parseColor("#E0F2FE"));
+            txtP.setTextAlign(Paint.Align.CENTER);
+            txtP.setTypeface(Typeface.SANS_SERIF, Typeface.BOLD);
+        }
+
+        @Override protected void onDraw(Canvas cv) {
+            float w = getWidth(), h = getHeight(), cx = w * 0.5f, cy = h * 0.5f;
+            float r = Math.min(cx, cy) - ringP.getStrokeWidth() * 2f;
+            if (bmp != null) {
+                BitmapShader sh = new BitmapShader(bmp, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+                float scale = Math.max(w / bmp.getWidth(), h / bmp.getHeight());
+                Matrix m = new Matrix();
+                m.setScale(scale, scale);
+                m.postTranslate((w - bmp.getWidth() * scale) * 0.5f, (h - bmp.getHeight() * scale) * 0.5f);
+                sh.setLocalMatrix(m);
+                imgP.setShader(sh);
+                cv.drawCircle(cx, cy, r, imgP);
+            } else {
+                imgP.setShader(null);
+                imgP.setColor(Color.parseColor("#13223D"));
+                cv.drawCircle(cx, cy, r, imgP);
+                txtP.setTextSize(r * 0.8f);
+                cv.drawText(fallback, cx, cy + r * 0.28f, txtP);
+            }
+            cv.drawCircle(cx, cy, r, ringP);
+        }
+    }
+
     static class VectorIconBtn extends View {
-        private int iconType; // 0=pause, 1=mic, 2=close, 3=play
+        private int iconType;
         private final Paint bgP = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint stP = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint icP = new Paint(Paint.ANTI_ALIAS_FLAG);
