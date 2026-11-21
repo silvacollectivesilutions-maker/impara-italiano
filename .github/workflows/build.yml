@@ -57,25 +57,96 @@ jobs:
                   html = old.read(it.filename).decode("utf-8", "ignore")
                   html = html.replace("border-radius:22px;overflow:hidden;background:transparent", "border-radius:18px;overflow:hidden;background:transparent;transition:background .35s ease")
                   html = html.replace(".label{", ".label{display:none!important;")
-                  desk_and_bg = (
-                      "<div id='sofiaDesk' style='position:absolute;left:0;right:0;bottom:0;height:21%;z-index:12;pointer-events:none;"
-                      "background:linear-gradient(180deg,#5c3a21 0%,#3f2614 22%,#2a180c 100%);"
-                      "border-top:2px solid #8a5a36;box-shadow:0 -8px 22px rgba(0,0,0,.55),inset 0 2px 6px rgba(255,220,180,.18)'>"
-                      "<div style='position:absolute;left:12%;bottom:24%;width:58px;height:14px;background:#f4efe6;border-radius:2px;transform:skewX(-18deg);box-shadow:0 3px 6px rgba(0,0,0,.45);border-left:4px solid #1b4d3e'></div>"
-                      "<div style='position:absolute;right:14%;bottom:26%;width:22px;height:20px;background:linear-gradient(90deg,#e8e2d5,#cfc5b4);border-radius:3px 3px 6px 6px;box-shadow:0 3px 6px rgba(0,0,0,.45)'></div>"
-                      "</div>"
-                      "<button id='bgBtn' type='button' style='position:absolute;top:8px;right:8px;z-index:99;background:rgba(12,32,37,.78);color:#f3f1e8;border:1px solid rgba(255,255,255,.28);border-radius:12px;padding:5px 10px;font-size:11px;pointer-events:auto'>🖼 Biblioteca</button>"
-                      "<script>(()=>{const st=document.getElementById('sofiaStage'),btn=document.getElementById('bgBtn');"
-                      "const bgs=["
-                      "{n:'Biblioteca',css:'linear-gradient(160deg, #3b2618 0%, #1f140d 65%, #120b07 100%)'},"
-                      "{n:'Pizarra',css:'radial-gradient(circle at 50% 35%, #23473a 0%, #132821 75%, #0c1915 100%)'},"
-                      "{n:'Roma',css:'linear-gradient(180deg, #3a4f7a 0%, #7d5a5a 55%, #241c24 100%)'},"
-                      "{n:'Estudio',css:'radial-gradient(circle at 50% 25%, #243b55 0%, #141e30 85%)'},"
-                      "{n:'Sin fondo',css:'transparent'}"
-                      "];let idx=0;try{idx=+(localStorage.getItem('sofia_bg_idx')||0)%bgs.length;}catch(e){}"
-                      "function apply(){st.style.background=bgs[idx].css;btn.textContent='🖼 '+bgs[idx].n;try{localStorage.setItem('sofia_bg_idx',idx);}catch(e){}}"
-                      "btn.addEventListener('click',()=>{idx=(idx+1)%bgs.length;apply();});apply();})();</script></body>"
-                  )
+                  desk_and_bg = """
+                  <div id="sofiaDeskWrap" style="position:absolute;left:0;right:0;bottom:0;height:23%;z-index:12;pointer-events:none;overflow:hidden;
+                    background:
+                      repeating-linear-gradient(90deg, rgba(255,220,185,0.03) 0px, rgba(255,220,185,0.03) 2px, transparent 2px, transparent 11px),
+                      radial-gradient(ellipse at 50% 0%, rgba(255,215,170,0.22) 0%, rgba(0,0,0,0) 65%),
+                      linear-gradient(180deg, #6e4527 0%, #52311a 16%, #3e2311 68%, #261409 86%, #180c05 100%);
+                    border-top:1.5px solid rgba(210,160,110,0.55);
+                    box-shadow:0 -10px 24px rgba(0,0,0,0.55), inset 0 2px 5px rgba(255,225,190,0.20);">
+                    <div style="position:absolute;left:0;right:0;bottom:0;height:20%;background:linear-gradient(180deg,#2c180b,#140a04);border-top:1px solid rgba(165,112,70,0.35);"></div>
+                  </div>
+                  <svg id="sofiaDeskProps" viewBox="0 0 420 130" preserveAspectRatio="xMidYMax meet" style="position:absolute;left:0;bottom:0;width:100%;height:50%;z-index:14;pointer-events:none;">
+                    <defs>
+                      <linearGradient id="pgL" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#f7f2e8"/><stop offset="85%" stop-color="#ece4d5"/><stop offset="100%" stop-color="#cfc3ae"/></linearGradient>
+                      <linearGradient id="pgR" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#d8ccb8"/><stop offset="18%" stop-color="#f5efe4"/><stop offset="100%" stop-color="#eae1d1"/></linearGradient>
+                      <linearGradient id="phScr" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#2b3a4a"/><stop offset="45%" stop-color="#111820"/><stop offset="100%" stop-color="#070a0e"/></linearGradient>
+                      <linearGradient id="vaseG" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#b8aa99"/><stop offset="28%" stop-color="#f3ece1"/><stop offset="65%" stop-color="#d9cbb8"/><stop offset="100%" stop-color="#8b7c6b"/></linearGradient>
+                      <radialGradient id="rose1" cx="40%" cy="35%" r="65%"><stop offset="0%" stop-color="#ffd6df"/><stop offset="55%" stop-color="#e35d7a"/><stop offset="100%" stop-color="#8f2440"/></radialGradient>
+                      <radialGradient id="rose2" cx="40%" cy="35%" r="65%"><stop offset="0%" stop-color="#fff4e0"/><stop offset="60%" stop-color="#f2c48d"/><stop offset="100%" stop-color="#b5763a"/></radialGradient>
+                    </defs>
+                    <!-- Sombra suave de Sofia sobre el escritorio -->
+                    <ellipse cx="210" cy="108" rx="95" ry="11" fill="rgba(10,5,2,0.42)"/>
+
+                    <!-- IZQUIERDA: Cuaderno abierto en perspectiva -->
+                    <g transform="translate(22,82)">
+                      <polygon points="4,26 112,26 122,36 -4,36" fill="rgba(0,0,0,0.45)"/>
+                      <polygon points="0,24 114,24 120,31 -6,31" fill="#1b3b36"/>
+                      <polygon points="4,22 57,24 55,6 14,5" fill="url(#pgL)" stroke="#c7baa4" stroke-width="0.6"/>
+                      <polygon points="57,24 111,22 101,5 55,6" fill="url(#pgR)" stroke="#c7baa4" stroke-width="0.6"/>
+                      <line x1="18" y1="10" x2="49" y2="10.5" stroke="#9aa3a8" stroke-width="0.7" opacity="0.75"/>
+                      <line x1="16" y1="14" x2="50" y2="14.5" stroke="#9aa3a8" stroke-width="0.7" opacity="0.75"/>
+                      <line x1="14" y1="18" x2="44" y2="18.5" stroke="#9aa3a8" stroke-width="0.7" opacity="0.75"/>
+                      <line x1="63" y1="10.5" x2="95" y2="10" stroke="#9aa3a8" stroke-width="0.7" opacity="0.75"/>
+                      <line x1="63" y1="14.5" x2="97" y2="14" stroke="#9aa3a8" stroke-width="0.7" opacity="0.75"/>
+                      <line x1="63" y1="18.5" x2="88" y2="18" stroke="#9aa3a8" stroke-width="0.7" opacity="0.75"/>
+                      <path d="M56,24 L59,32 L54,30 Z" fill="#b83245"/>
+                      <!-- Boligrafo sobre el cuaderno -->
+                      <g transform="rotate(-12, 86, 16)">
+                        <rect x="64" y="14" width="42" height="3.4" rx="1.7" fill="#1e2733"/>
+                        <rect x="74" y="14" width="3" height="3.4" fill="#d4af37"/>
+                        <polygon points="64,14.3 58,15.7 64,17.1" fill="#d4af37"/>
+                      </g>
+                    </g>
+
+                    <!-- CENTRO-IZQUIERDA: Celular moderno sobre la mesa -->
+                    <g transform="translate(148,96)">
+                      <polygon points="6,14 48,14 53,21 1,21" fill="rgba(0,0,0,0.48)"/>
+                      <polygon points="8,4 44,4 50,18 2,18" fill="#5e6873" stroke="#8a96a3" stroke-width="0.8"/>
+                      <polygon points="10,5.5 42,5.5 47.5,16.5 4.5,16.5" fill="url(#phScr)"/>
+                      <polygon points="12,6.5 25,6.5 16,15.5 7,15.5" fill="rgba(255,255,255,0.10)"/>
+                      <rect x="22" y="10" width="9" height="1.4" rx="0.7" fill="rgba(120,210,255,0.45)"/>
+                    </g>
+
+                    <!-- DERECHA: Jarron de ceramica con flores y hojas -->
+                    <g transform="translate(322,22)">
+                      <ellipse cx="42" cy="92" rx="22" ry="6" fill="rgba(0,0,0,0.45)"/>
+                      <!-- Tallos y hojas -->
+                      <path d="M40,56 Q34,34 26,22" stroke="#2f5e36" stroke-width="2.2" fill="none"/>
+                      <path d="M42,56 Q43,32 45,14" stroke="#2a5430" stroke-width="2.2" fill="none"/>
+                      <path d="M44,56 Q52,36 60,25" stroke="#2f5e36" stroke-width="2.2" fill="none"/>
+                      <ellipse cx="24" cy="36" rx="9" ry="4" transform="rotate(-32 24 36)" fill="#3b7543"/>
+                      <ellipse cx="58" cy="39" rx="9" ry="4" transform="rotate(28 58 39)" fill="#34693b"/>
+                      <ellipse cx="34" cy="28" rx="7" ry="3.2" transform="rotate(-55 34 28)" fill="#46874f"/>
+                      <ellipse cx="50" cy="27" rx="7" ry="3.2" transform="rotate(48 50 27)" fill="#3d7a46"/>
+                      <!-- Flores -->
+                      <circle cx="25" cy="22" r="8.5" fill="url(#rose1)"/>
+                      <circle cx="25" cy="21" r="4" fill="#ffb8c9" opacity="0.65"/>
+                      <circle cx="45" cy="14" r="9.5" fill="url(#rose2)"/>
+                      <circle cx="45" cy="13" r="4.5" fill="#fff7e6" opacity="0.75"/>
+                      <circle cx="60" cy="25" r="8" fill="url(#rose1)"/>
+                      <circle cx="60" cy="24" r="3.5" fill="#ffc2d1" opacity="0.65"/>
+                      <circle cx="36" cy="20" r="5" fill="#fff0d4"/>
+                      <!-- Cuerpo del jarron -->
+                      <path d="M32,48 C32,54 24,62 24,75 C24,86 31,92 42,92 C53,92 60,86 60,75 C60,62 52,54 52,48 Z" fill="url(#vaseG)" stroke="#8c7d6b" stroke-width="0.7"/>
+                      <ellipse cx="42" cy="48" rx="10" ry="3" fill="#cfc1ae" stroke="#8c7d6b" stroke-width="0.6"/>
+                      <ellipse cx="42" cy="48" rx="7.5" ry="1.8" fill="#4f4337"/>
+                      <path d="M31,64 C29,72 31,82 35,86" stroke="rgba(255,255,255,0.45)" stroke-width="2" stroke-linecap="round" fill="none"/>
+                    </g>
+                  </svg>
+                  <button id="bgBtn" type="button" style="position:absolute;top:8px;right:8px;z-index:99;background:rgba(12,32,37,.78);color:#f3f1e8;border:1px solid rgba(255,255,255,.28);border-radius:12px;padding:5px 10px;font-size:11px;pointer-events:auto">🖼 Biblioteca</button>
+                  <script>(()=>{const st=document.getElementById('sofiaStage'),btn=document.getElementById('bgBtn');
+                  const bgs=[
+                  {n:'Biblioteca',css:'linear-gradient(160deg, #3b2618 0%, #1f140d 65%, #120b07 100%)'},
+                  {n:'Pizarra',css:'radial-gradient(circle at 50% 35%, #23473a 0%, #132821 75%, #0c1915 100%)'},
+                  {n:'Roma',css:'linear-gradient(180deg, #3a4f7a 0%, #7d5a5a 55%, #241c24 100%)'},
+                  {n:'Estudio',css:'radial-gradient(circle at 50% 25%, #243b55 0%, #141e30 85%)'},
+                  {n:'Sin fondo',css:'transparent'}
+                  ];let idx=0;try{idx=+(localStorage.getItem('sofia_bg_idx')||0)%bgs.length;}catch(e){}
+                  function apply(){st.style.background=bgs[idx].css;btn.textContent='🖼 '+bgs[idx].n;try{localStorage.setItem('sofia_bg_idx',idx);}catch(e){}}
+                  btn.addEventListener('click',()=>{idx=(idx+1)%bgs.length;apply();});apply();})();</script></body>
+                  """
                   html = html.replace("</body>", desk_and_bg)
                   out.writestr(copy.copy(it), html.encode("utf-8"))
               elif it.filename == "assets/sofia84/character.js":
