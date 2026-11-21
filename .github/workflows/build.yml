@@ -14,10 +14,14 @@ jobs:
       - name: Descargar APK base y llave fija
         env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
         run: gh release download Base --pattern "*.apk" -D . && (gh release download Base --pattern "impara.jks" -D . || (keytool -genkeypair -v -keystore impara.jks -alias impara -keyalg RSA -keysize 2048 -validity 10000 -storepass android -keypass android -dname "CN=Impara,O=GermanSilva,C=HN" && gh release upload Base impara.jks))
-      - name: Inspeccionar assets 3D de Sofia
+      - name: Inspeccionar assets y codigo de Sofia
         run: |
-          echo "=== ARCHIVOS 3D Y AVATAR ==="
-          unzip -l Parlora_5_51.apk | grep -iE "\.(glb|gltf|vrm|fbx|obj|png|jpg|webp|ktx|bin)|avatar|sofia|model|asset"
+          echo "=== TODOS LOS ARCHIVOS EN ASSETS Y RAW ==="
+          unzip -l Parlora_5_51.apk | grep -E "assets/|res/raw/" || true
+          echo "=== ARCHIVOS JAVA DEL PROYECTO ==="
+          ls -1 build551/src/com/germansilva/italianomaestro/ || true
+          echo "=== REFERENCIAS 3D / AVATAR EN JAVA ==="
+          grep -rn -iE "glb|gltf|vrm|avatar|three|webview|filament|canvas|dress|cloth|outfit|hair|mesh|html" build551/src/com/germansilva/italianomaestro/ | head -n 60 || true
       - name: Compilar Java
         run: mkdir -p build551/deps build551/appclasses build551/dex && curl -sL -o build551/deps/json.jar https://repo1.maven.org/maven2/org/json/json/20231013/json-20231013.jar && ANDROID_JAR=$(ls -1 "$ANDROID_HOME"/platforms/android-*/android.jar | sort -V | tail -n 1) && find build551/src build551/supportsrc build551/stubs -name "*.java" > build551/java-sources.txt && javac -nowarn -cp "build551/deps/json.jar:$ANDROID_JAR:build551/deps-extra/sherpa-api.jar" -d build551/appclasses @build551/java-sources.txt
       - name: Empaquetar y firmar APK
