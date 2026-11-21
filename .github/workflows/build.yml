@@ -46,8 +46,16 @@ jobs:
           from pathlib import Path
           dex = Path("build551/dex/classes.dex").read_bytes()
           custom_glb = Path("overrides/sofia.glb")
-          fondos_dir = Path("overrides/fondos")
-          has_desk = (fondos_dir / "desk.jpg").exists()
+          fondos_dir = Path("fondos") if Path("fondos").exists() else Path("overrides/fondos")
+          desk_file = fondos_dir / "desk.jpg"
+          if not desk_file.exists():
+              sc = sorted(fondos_dir.glob("Screenshot_*"))
+              if sc:
+                  desk_file = sc[0]
+          chiara_file = fondos_dir / "chiara.jpg"
+          if not chiara_file.exists() and (fondos_dir / "1795271118941.jpg").exists():
+              chiara_file = fondos_dir / "1795271118941.jpg"
+          has_desk = desk_file.exists()
           bg_files = ["biblioteca.jpg", "roma.jpg", "caffe.jpg", "estudio.jpg"]
           old = zipfile.ZipFile("Parlora_5_51.apk", "r")
           out = zipfile.ZipFile("unsigned.apk", "w")
@@ -164,7 +172,11 @@ jobs:
                   out.writestr(copy.copy(it), js.encode("utf-8"))
               else:
                   out.writestr(copy.copy(it), old.read(it.filename))
-          for extra in ["desk.jpg", "chiara.jpg"] + bg_files:
+          if desk_file.exists():
+              out.writestr(zipfile.ZipInfo("assets/sofia84/desk.jpg"), desk_file.read_bytes())
+          if chiara_file.exists():
+              out.writestr(zipfile.ZipInfo("assets/sofia84/chiara.jpg"), chiara_file.read_bytes())
+          for extra in bg_files:
               ep = fondos_dir / extra
               if ep.exists():
                   out.writestr(zipfile.ZipInfo("assets/sofia84/" + extra), ep.read_bytes())
