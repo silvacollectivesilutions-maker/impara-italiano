@@ -320,27 +320,6 @@ public final class ImparaSuperApp {
     } catch (Throwable ignored) {}
   }
 
-  public static void startShadowingCycle(MainActivity a, String phrase) {
-    try {
-      String it = extractItalianOnly(phrase);
-      if (TextUtils.isEmpty(it)) {
-        a.toast("No hay frase en italiano para practicar");
-        return;
-      }
-      recordActivity(a, 10);
-      Handler h = new Handler(Looper.getMainLooper());
-      a.toast("1/2 Normal — Escucha y repite...");
-      a.speak(it, 0, 1.0f);
-      long pauseMs = Math.max(3600L, Math.min(8500L, it.length() * 110L));
-      h.postDelayed(() -> {
-        try {
-          a.toast("2/2 Lento (0.75x) — Repite con Sofía");
-          a.speak(it, 0, 0.75f);
-        } catch (Throwable ignored) {}
-      }, pauseMs);
-    } catch (Throwable ignored) {}
-  }
-
   private static LinearLayout.LayoutParams rowGap(MainActivity a, int bottomDp) {
     LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
     lp.setMargins(0, 0, 0, a.dp(bottomDp));
@@ -642,11 +621,9 @@ public final class ImparaSuperApp {
     LinearLayout outer = new LinearLayout(a);
     outer.setOrientation(LinearLayout.VERTICAL);
 
-    // Cabecera limpia
     LinearLayout head = dialogHeader(a, "IMPARA L'ITALIANO · ESTUDIO", "Centro de aprendizaje");
     outer.addView(head);
 
-    // 3 metricas compactas en horizontal
     LinearLayout stats = new LinearLayout(a);
     stats.setOrientation(LinearLayout.HORIZONTAL);
     LinearLayout.LayoutParams sLp1 = new LinearLayout.LayoutParams(0, -2, 1f); sLp1.setMarginEnd(a.dp(5));
@@ -657,7 +634,6 @@ public final class ImparaSuperApp {
     stats.addView(buildStatPill(a, level, "Nivel"), sLp3);
     outer.addView(stats, rowGap(a, 10));
 
-    // Segmented Control: 3 Pestanas (Aprender | Practicar | Ajustes)
     LinearLayout tabsBar = new LinearLayout(a);
     tabsBar.setOrientation(LinearLayout.HORIZONTAL);
     tabsBar.setPadding(a.dp(3), a.dp(3), a.dp(3), a.dp(3));
@@ -676,7 +652,6 @@ public final class ImparaSuperApp {
 
     Runnable[] renderTab = new Runnable[3];
 
-    // TAB 0: APRENDER (Palabra del Dia + Cuadricula 2x2)
     renderTab[0] = () -> {
       bodyContainer.removeAllViews();
       bodyContainer.addView(buildDailyWordCard(a, dismiss), rowGap(a, 10));
@@ -698,7 +673,6 @@ public final class ImparaSuperApp {
       bodyContainer.addView(buildTwoColRow(a, tFalse, tQuick), rowGap(a, 4));
     };
 
-    // TAB 1: PRACTICAR (Cuadricula 2x2 + extras)
     renderTab[1] = () -> {
       bodyContainer.removeAllViews();
       View tShad = buildGridTile(a, "◎", "Shadowing", "Normal 1.0x y lento 0.75x", () -> {
@@ -726,11 +700,9 @@ public final class ImparaSuperApp {
       bodyContainer.addView(buildTwoColRow(a, tStory, tSlang), rowGap(a, 4));
     };
 
-    // TAB 2: AJUSTES (Nivel rapido + Temas + Estilo + Historial + Respaldo)
     renderTab[2] = () -> {
       bodyContainer.removeAllViews();
 
-      // Selector rapido de nivel (4 botones en linea)
       TextView lblLvl = new TextView(a);
       lblLvl.setText("NIVEL DE SOFÍA");
       lblLvl.setTextColor(muted(a));
@@ -764,7 +736,6 @@ public final class ImparaSuperApp {
       }
       bodyContainer.addView(lvlRow, rowGap(a, 12));
 
-      // Selector rapido de tema (4 botones en linea)
       TextView lblTheme = new TextView(a);
       lblTheme.setText("TEMA VISUAL");
       lblTheme.setTextColor(muted(a));
@@ -809,7 +780,7 @@ public final class ImparaSuperApp {
       }), rowGap(a, 0));
     };
 
-    final Runnable selectTab[] = new Runnable[3];
+    final Runnable[] selectTab = new Runnable[3];
     for (int i = 0; i < 3; i++) {
       final int idx = i;
       TextView tb = new TextView(a);
@@ -1355,4 +1326,4 @@ public final class ImparaSuperApp {
     }
     prefs.edit().putInt(XP_KEY, prefs.getInt(XP_KEY, 0) + Math.max(0, gainedXp)).apply();
   }
-        }
+                   }
