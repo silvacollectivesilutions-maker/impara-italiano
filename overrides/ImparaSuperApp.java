@@ -12,6 +12,7 @@ import android.os.Looper;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
+import android.util.TypedValue;
 import android.view.*;
 import android.widget.*;
 import java.text.SimpleDateFormat;
@@ -20,20 +21,21 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.json.*;
 
-/** Centro Super App completo de Impara l'italiano (100% autocontenido en un solo archivo). */
+/** Dashboard profesional con 3 pestanas, cuadriculas 2x2 y motor de audio 100% solo italiano. */
 public final class ImparaSuperApp {
   static final int INK = 0xFFFFFFFF;
-  static final int STROKE_SUBTLE = 0x33FFFFFF;
+  static final int STROKE_SUBTLE = 0x26FFFFFF;
 
   private static final int[][] THEMES = {
-    {0xFF101A2B, 0xFF17243B, 0xFF1E3252, 0xFF56B4FF, 0xFF9FB2C8},
-    {0xFF1B1411, 0xFF281E19, 0xFF3A2A22, 0xFFE5A95C, 0xFFC7B2A3},
-    {0xFF0E1D17, 0xFF152C23, 0xFF1C3D30, 0xFF4ADE80, 0xFFA3C7B5},
-    {0xFF000000, 0xFF111318, 0xFF1B1F2A, 0xFF38BDF8, 0xFF94A3B8}
+    {0xFF0C1524, 0xFF132036, 0xFF1B2E4B, 0xFF4DA8FF, 0xFF94A8C0},
+    {0xFF18120F, 0xFF241B16, 0xFF34261E, 0xFFE6A85C, 0xFFC4B0A1},
+    {0xFF0C1914, 0xFF13271F, 0xFF1B382D, 0xFF4ADE80, 0xFF9FC4B2},
+    {0xFF000000, 0xFF10131A, 0xFF191E29, 0xFF38BDF8, 0xFF94A3B8}
   };
-  private static final String[] THEME_NAMES = {"Noche Azul", "Espresso Oscuro", "Verde Italia", "AMOLED Negro"};
+  private static final String[] THEME_NAMES = {"Noche", "Espresso", "Italia", "AMOLED"};
 
   private static final String CARDS_KEY = "impara_cards_v1";
+  private static final String HIST_KEY = "impara_chat_history_v1";
   private static final String XP_KEY = "impara_xp_v1";
   private static final String STREAK_KEY = "impara_streak_v1";
   private static final String LAST_DAY_KEY = "impara_last_day_v1";
@@ -54,7 +56,7 @@ public final class ImparaSuperApp {
     " gracias ", " hola ", " hoy ", " aquí ", " aqui ", " allá ", " alla ", " dónde ",
     " donde ", " cuándo ", " cuando ", " cuánto ", " cuanto ", " necesito ", " hablar ",
     " decir ", " hacer ", " saber ", " pronunciar ", " mejor ", " los ", " las ",
-    " el ", " del ", " dirías ", " dirias ", " día ", " dia "
+    " el ", " del ", " dirías ", " dirias ", " día ", " dia ", " tal ", " tu ", " tus "
   };
 
   private static final String[][] DAILY_WORDS = {
@@ -68,7 +70,7 @@ public final class ImparaSuperApp {
     {"Invece", "En cambio / Sin embargo", "Lui preferisce il tè, io invece bevo caffè."},
     {"Davvero", "De verdad / Realmente", "Davvero hai imparato così in fretta?"},
     {"Subito", "Enseguida / Inmediatamente", "Arrivo subito, dammi solo un minuto!"},
-    {"Mica", "Para nada / Ni siquiera (enfático)", "Non è mica difficile come sembra."},
+    {"Mica", "Para nada / Ni siquiera", "Non è mica difficile come sembra."},
     {"Ormai", "Ya / A estas alturas", "Ormai capisco quasi tutto quello che dici."}
   };
 
@@ -126,18 +128,18 @@ public final class ImparaSuperApp {
   };
 
   private static final String[][] FALSE_FRIENDS = {
-    {"Burro", "Mantequilla", "NO es el animal (eso es 'asino')", "Metto il burro sul pane caldo."},
-    {"Salire", "Subir", "NO es salir (eso es 'uscire')", "Saliamo al terzo piano a piedi."},
-    {"Caldo", "Caliente / Calor", "NO es sopa (eso es 'brodo')", "Oggi fa molto caldo a Roma!"},
-    {"Subito", "Enseguida / Ya", "NO es repentino (eso es 'improvviso')", "Torno subito, aspettami qui."},
-    {"Camera", "Habitación / Cuarto", "NO es cámara de fotos ('macchina fotografica')", "Ho prenotato una camera doppia."},
-    {"Largo", "Ancho", "NO es largo/extenso (eso es 'lungo')", "Questa strada è molto larga."},
-    {"Guardare", "Mirar", "NO es guardar (eso es 'conservare / mettere via')", "Guarda che bel tramonto!"},
-    {"Aceto", "Vinagre", "NO es aceite (eso es 'olio')", "Condisco l'insalata con olio e aceto."},
-    {"Officina", "Taller mecánico", "NO es oficina (eso es 'ufficio')", "La mia auto è in officina."},
-    {"Parenti", "Familiares / Parientes", "NO solo padres (padres es 'genitori')", "A Natale vedo tutti i miei parenti."},
-    {"Topo", "Ratón", "NO es topo animal (eso es 'talpa')", "C'è un piccolo topo in giardino."},
-    {"Imbarazzata", "Avergonzada / Incómoda", "NO es embarazada (eso es 'incinta')", "Ero un po' imbarazzata davanti a tutti."}
+    {"Burro", "Mantequilla", "NO es el animal (asino)", "Metto il burro sul pane caldo."},
+    {"Salire", "Subir", "NO es salir (uscire)", "Saliamo al terzo piano a piedi."},
+    {"Caldo", "Caliente / Calor", "NO es sopa (brodo)", "Oggi fa molto caldo a Roma!"},
+    {"Subito", "Enseguida / Ya", "NO es repentino (improvviso)", "Torno subito, aspettami qui."},
+    {"Camera", "Habitación", "NO es cámara (macchina fotografica)", "Ho prenotato una camera doppia."},
+    {"Largo", "Ancho", "NO es largo (lungo)", "Questa strada è molto larga."},
+    {"Guardare", "Mirar", "NO es guardar (conservare)", "Guarda che bel tramonto!"},
+    {"Aceto", "Vinagre", "NO es aceite (olio)", "Condisco l'insalata con olio e aceto."},
+    {"Officina", "Taller mecánico", "NO es oficina (ufficio)", "La mia auto è in officina."},
+    {"Parenti", "Familiares", "NO solo padres (genitori)", "A Natale vedo tutti i miei parenti."},
+    {"Topo", "Ratón", "NO es topo animal (talpa)", "C'è un piccolo topo in giardino."},
+    {"Imbarazzata", "Avergonzada", "NO es embarazada (incinta)", "Ero un po' imbarazzata davanti a tutti."}
   };
 
   private static int[] palette(MainActivity a) {
@@ -151,6 +153,50 @@ public final class ImparaSuperApp {
   static int bgBadge(MainActivity a) { return palette(a)[2]; }
   static int accent(MainActivity a) { return palette(a)[3]; }
   static int muted(MainActivity a) { return palette(a)[4]; }
+
+  /** Inserta un boton flotante elegante '✦ Estudio' sin tocar la barra de mensajes ni microfono. */
+  public static void attachStudioFab(MainActivity a) {
+    try {
+      if (a == null) return;
+      View contentView = a.findViewById(android.R.id.content);
+      if (!(contentView instanceof FrameLayout)) return;
+      FrameLayout content = (FrameLayout) contentView;
+      View existing = content.findViewWithTag("impara_studio_fab");
+      if (existing != null) {
+        existing.setVisibility(a.page == 1 ? View.VISIBLE : View.GONE);
+        return;
+      }
+
+      LinearLayout fab = new LinearLayout(a);
+      fab.setTag("impara_studio_fab");
+      fab.setOrientation(LinearLayout.HORIZONTAL);
+      fab.setGravity(Gravity.CENTER_VERTICAL);
+      fab.setPadding(a.dp(12), a.dp(8), a.dp(13), a.dp(8));
+      fab.setBackground(roundBg(a, 0xE8132640, accent(a), 999));
+      fab.setElevation(a.dp(6));
+      fab.setClickable(true);
+      fab.setFocusable(true);
+      fab.setOnClickListener(v -> openHub(a, ""));
+
+      TextView icon = new TextView(a);
+      icon.setText("✦");
+      icon.setTextColor(accent(a));
+      icon.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f);
+      icon.setPadding(0, 0, a.dp(5), 0);
+      fab.addView(icon);
+
+      TextView label = new TextView(a);
+      label.setText("Estudio");
+      label.setTextColor(INK);
+      label.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+      label.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+      fab.addView(label);
+
+      FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(-2, -2, Gravity.BOTTOM | Gravity.END);
+      lp.setMargins(0, 0, a.dp(12), a.dp(158));
+      content.addView(fab, lp);
+    } catch (Throwable ignored) {}
+  }
 
   static boolean isSpanishLine(String line) {
     if (TextUtils.isEmpty(line)) return false;
@@ -199,7 +245,7 @@ public final class ImparaSuperApp {
         }
       }
       m.appendTail(sb);
-      clean = sb.toString().trim();
+      clean = sb.toString().replaceAll("[\\p{So}\\p{Cn}]", "").trim();
       if (clean.isEmpty()) continue;
 
       if (!isSpanishLine(clean)) {
@@ -275,7 +321,7 @@ public final class ImparaSuperApp {
     TextView chip = new TextView(a);
     chip.setText(chipText);
     chip.setTextColor(accent(a));
-    chip.setTextSize(11);
+    chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
     chip.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
     chip.setLetterSpacing(0.08f);
     root.addView(chip);
@@ -283,7 +329,7 @@ public final class ImparaSuperApp {
     TextView heading = new TextView(a);
     heading.setText(titleText);
     heading.setTextColor(INK);
-    heading.setTextSize(18);
+    heading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f);
     heading.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
     heading.setPadding(0, a.dp(2), 0, a.dp(10));
     root.addView(heading);
@@ -304,6 +350,60 @@ public final class ImparaSuperApp {
     return et;
   }
 
+  static View buildGridTile(MainActivity a, String icon, String title, String sub, Runnable action) {
+    LinearLayout tile = new LinearLayout(a);
+    tile.setOrientation(LinearLayout.VERTICAL);
+    tile.setPadding(a.dp(11), a.dp(11), a.dp(11), a.dp(11));
+    tile.setBackground(roundBg(a, bgCard(a), STROKE_SUBTLE, 16));
+    tile.setClickable(true);
+    tile.setFocusable(true);
+    tile.setOnClickListener(v -> safeRun(a, action));
+
+    TextView badge = new TextView(a);
+    badge.setText(icon);
+    badge.setTextColor(accent(a));
+    badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15f);
+    badge.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+    badge.setGravity(Gravity.CENTER);
+    badge.setBackground(roundBg(a, bgBadge(a), 0, 10));
+    LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(a.dp(32), a.dp(32));
+    bLp.setMargins(0, 0, 0, a.dp(8));
+    tile.addView(badge, bLp);
+
+    TextView tvTitle = new TextView(a);
+    tvTitle.setText(title);
+    tvTitle.setTextColor(INK);
+    tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13.5f);
+    tvTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+    tvTitle.setMaxLines(1);
+    tvTitle.setEllipsize(TextUtils.TruncateAt.END);
+    tile.addView(tvTitle);
+
+    if (!TextUtils.isEmpty(sub)) {
+      TextView tvSub = new TextView(a);
+      tvSub.setText(sub);
+      tvSub.setTextColor(muted(a));
+      tvSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f);
+      tvSub.setMaxLines(2);
+      tvSub.setEllipsize(TextUtils.TruncateAt.END);
+      tvSub.setPadding(0, a.dp(2), 0, 0);
+      tile.addView(tvSub);
+    }
+    return tile;
+  }
+
+  static LinearLayout buildTwoColRow(MainActivity a, View left, View right) {
+    LinearLayout row = new LinearLayout(a);
+    row.setOrientation(LinearLayout.HORIZONTAL);
+    LinearLayout.LayoutParams lpL = new LinearLayout.LayoutParams(0, -1, 1f);
+    lpL.setMarginEnd(a.dp(4));
+    LinearLayout.LayoutParams lpR = new LinearLayout.LayoutParams(0, -1, 1f);
+    lpR.setMarginStart(a.dp(4));
+    row.addView(left, lpL);
+    row.addView(right, lpR);
+    return row;
+  }
+
   static View buildOptionRow(MainActivity a, String badgeText, String title, String subtitle, Runnable action) {
     LinearLayout row = new LinearLayout(a);
     row.setOrientation(LinearLayout.HORIZONTAL);
@@ -316,11 +416,11 @@ public final class ImparaSuperApp {
 
     TextView badge = new TextView(a);
     badge.setText(badgeText);
-    badge.setTextColor(INK);
-    badge.setTextSize(14);
+    badge.setTextColor(accent(a));
+    badge.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
     badge.setGravity(Gravity.CENTER);
-    badge.setBackground(roundBg(a, bgBadge(a), (accent(a) & 0x00FFFFFF) | 0x44000000, 10));
-    LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(a.dp(34), a.dp(34));
+    badge.setBackground(roundBg(a, bgBadge(a), 0, 10));
+    LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(a.dp(32), a.dp(32));
     bLp.setMarginEnd(a.dp(10));
     row.addView(badge, bLp);
 
@@ -330,7 +430,7 @@ public final class ImparaSuperApp {
     TextView tvTitle = new TextView(a);
     tvTitle.setText(title);
     tvTitle.setTextColor(INK);
-    tvTitle.setTextSize(14.5f);
+    tvTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
     tvTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
     col.addView(tvTitle);
 
@@ -338,7 +438,7 @@ public final class ImparaSuperApp {
       TextView tvSub = new TextView(a);
       tvSub.setText(subtitle);
       tvSub.setTextColor(muted(a));
-      tvSub.setTextSize(11.5f);
+      tvSub.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11.5f);
       tvSub.setPadding(0, a.dp(1), 0, 0);
       col.addView(tvSub);
     }
@@ -348,7 +448,7 @@ public final class ImparaSuperApp {
     TextView arrow = new TextView(a);
     arrow.setText("›");
     arrow.setTextColor(accent(a));
-    arrow.setTextSize(18);
+    arrow.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18f);
     arrow.setPadding(a.dp(6), 0, a.dp(2), 0);
     row.addView(arrow);
     return row;
@@ -383,17 +483,39 @@ public final class ImparaSuperApp {
     }
   }
 
-  private static TextView chipBtn(MainActivity a, String label, Runnable onClick) {
+  private static TextView chipBtn(MainActivity a, String label, boolean primary, Runnable onClick) {
     TextView tv = new TextView(a);
     tv.setText(label);
-    tv.setTextColor(INK);
-    tv.setTextSize(12);
+    tv.setTextColor(primary ? 0xFF0A1422 : INK);
+    tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
     tv.setGravity(Gravity.CENTER);
     tv.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
     tv.setPadding(a.dp(8), a.dp(7), a.dp(8), a.dp(7));
-    tv.setBackground(roundBg(a, bgCard(a), 0x44FFFFFF, 10));
+    tv.setBackground(roundBg(a, primary ? accent(a) : bgCard(a), primary ? 0 : STROKE_SUBTLE, 10));
     tv.setOnClickListener(v -> safeRun(a, onClick));
     return tv;
+  }
+
+  private static View buildStatPill(MainActivity a, String val, String label) {
+    LinearLayout box = new LinearLayout(a);
+    box.setOrientation(LinearLayout.VERTICAL);
+    box.setGravity(Gravity.CENTER);
+    box.setPadding(a.dp(6), a.dp(7), a.dp(6), a.dp(7));
+    box.setBackground(roundBg(a, bgCard(a), STROKE_SUBTLE, 12));
+
+    TextView v = new TextView(a);
+    v.setText(val);
+    v.setTextColor(INK);
+    v.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f);
+    v.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+    box.addView(v);
+
+    TextView l = new TextView(a);
+    l.setText(label);
+    l.setTextColor(muted(a));
+    l.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f);
+    box.addView(l);
+    return box;
   }
 
   private static View buildDailyWordCard(MainActivity a, Runnable dismissHub) {
@@ -404,20 +526,21 @@ public final class ImparaSuperApp {
 
     LinearLayout card = new LinearLayout(a);
     card.setOrientation(LinearLayout.VERTICAL);
-    card.setPadding(a.dp(12), a.dp(10), a.dp(12), a.dp(10));
+    card.setPadding(a.dp(12), a.dp(11), a.dp(12), a.dp(11));
     card.setBackground(roundBg(a, bgBadge(a), accent(a), 16));
 
     TextView tag = new TextView(a);
-    tag.setText(done ? "PALABRA DEL DÍA · COMPLETADA" : "RETO DIARIO · PALABRA DEL DÍA (+20 XP)");
+    tag.setText(done ? "PALABRA DEL DÍA · COMPLETADA" : "PALABRA DEL DÍA · RETO +20 XP");
     tag.setTextColor(accent(a));
-    tag.setTextSize(10.5f);
+    tag.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10f);
     tag.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+    tag.setLetterSpacing(0.06f);
     card.addView(tag);
 
     TextView word = new TextView(a);
     word.setText(w[0] + " — " + w[1]);
     word.setTextColor(INK);
-    word.setTextSize(16);
+    word.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.5f);
     word.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
     word.setPadding(0, a.dp(3), 0, a.dp(2));
     card.addView(word);
@@ -425,23 +548,23 @@ public final class ImparaSuperApp {
     TextView ex = new TextView(a);
     ex.setText("«" + w[2] + "»");
     ex.setTextColor(muted(a));
-    ex.setTextSize(12.5f);
-    ex.setPadding(0, 0, 0, a.dp(8));
+    ex.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
+    ex.setPadding(0, 0, 0, a.dp(9));
     card.addView(ex);
 
     LinearLayout btnRow = new LinearLayout(a);
     btnRow.setOrientation(LinearLayout.HORIZONTAL);
 
-    TextView bHear = chipBtn(a, "▶ Escuchar IT", () -> a.speak(w[0] + ". " + w[2], 0, 0.92f));
+    TextView bHear = chipBtn(a, "▶ Oír italiano", false, () -> a.speak(w[0] + ". " + w[2], 0, 0.92f));
     LinearLayout.LayoutParams lp1 = new LinearLayout.LayoutParams(0, -2, 1f);
     lp1.setMarginEnd(a.dp(6));
     btnRow.addView(bHear, lp1);
 
-    TextView bDone = chipBtn(a, done ? "Practicar" : "Completar +20 XP", () -> {
+    TextView bDone = chipBtn(a, done ? "Practicar" : "Completar +20 XP", true, () -> {
       if (!done && a.prefs != null) {
         a.prefs.edit().putString(DAILY_DONE_KEY, today).apply();
         recordActivity(a, 20);
-        a.toast("¡Reto diario completado! +20 XP");
+        a.toast("¡Reto completado! +20 XP");
       }
       dismissHub.run();
       a.ask("Ciao Sofia! Parliamo solo in italiano: fammi praticare la parola '" + w[0] + "' con un esempio semplice.");
@@ -463,105 +586,242 @@ public final class ImparaSuperApp {
     int xp = a.prefs != null ? a.prefs.getInt(XP_KEY, 0) : 0;
     int streak = a.prefs != null ? a.prefs.getInt(STREAK_KEY, 1) : 1;
     String level = a.prefs != null ? a.prefs.getString(LEVEL_KEY, "A2") : "A2";
-    int themeIdx = a.prefs != null ? a.prefs.getInt(THEME_KEY, 0) : 0;
-    String themeName = THEME_NAMES[Math.max(0, Math.min(themeIdx, THEME_NAMES.length - 1))];
-    String style = a.prefs != null ? a.prefs.getString(STYLE_KEY, "Profesora italiana") : "Profesora italiana";
 
-    ScrollView scroll = new ScrollView(a);
-    scroll.setVerticalScrollBarEnabled(false);
-    LinearLayout root = dialogHeader(a, "IMPARA L'ITALIANO · SÚPER APP", streak + "d · " + xp + " XP · Nivel " + level);
+    LinearLayout outer = new LinearLayout(a);
+    outer.setOrientation(LinearLayout.VERTICAL);
+
+    // Cabecera limpia
+    LinearLayout head = dialogHeader(a, "IMPARA L'ITALIANO · ESTUDIO", "Centro de aprendizaje");
+    outer.addView(head);
+
+    // 3 metricas compactas en horizontal
+    LinearLayout stats = new LinearLayout(a);
+    stats.setOrientation(LinearLayout.HORIZONTAL);
+    LinearLayout.LayoutParams sLp1 = new LinearLayout.LayoutParams(0, -2, 1f); sLp1.setMarginEnd(a.dp(5));
+    LinearLayout.LayoutParams sLp2 = new LinearLayout.LayoutParams(0, -2, 1f); sLp2.setMarginEnd(a.dp(5));
+    LinearLayout.LayoutParams sLp3 = new LinearLayout.LayoutParams(0, -2, 1f);
+    stats.addView(buildStatPill(a, streak + "d", "Racha"), sLp1);
+    stats.addView(buildStatPill(a, xp + " XP", "Puntos"), sLp2);
+    stats.addView(buildStatPill(a, level, "Nivel"), sLp3);
+    outer.addView(stats, rowGap(a, 10));
+
+    // Segmented Control: 3 Pestanas (Aprender | Practicar | Ajustes)
+    LinearLayout tabsBar = new LinearLayout(a);
+    tabsBar.setOrientation(LinearLayout.HORIZONTAL);
+    tabsBar.setPadding(a.dp(3), a.dp(3), a.dp(3), a.dp(3));
+    tabsBar.setBackground(roundBg(a, bgCard(a), STROKE_SUBTLE, 14));
+
+    final String[] tabTitles = {"Aprender", "Practicar", "Ajustes"};
+    final TextView[] tabBtns = new TextView[3];
+    final ScrollView bodyScroll = new ScrollView(a);
+    bodyScroll.setVerticalScrollBarEnabled(false);
+    final LinearLayout bodyContainer = new LinearLayout(a);
+    bodyContainer.setOrientation(LinearLayout.VERTICAL);
+    bodyScroll.addView(bodyContainer);
 
     final AlertDialog[] holder = new AlertDialog[1];
     Runnable dismiss = () -> { if (holder[0] != null && holder[0].isShowing()) holder[0].dismiss(); };
 
-    // Tarjeta fija: Reto Diario + Palabra del Día
-    root.addView(buildDailyWordCard(a, dismiss), rowGap(a, 10));
+    Runnable[] renderTab = new Runnable[3];
 
-    root.addView(buildOptionRow(a, "▶", "Pronunciar solo italiano", "Omite líneas en español para sonar natural", () -> {
-      dismiss.run();
-      String target = !TextUtils.isEmpty(selectedText) ? selectedText : "Buongiorno! Come stai oggi?";
-      speakItalianOnly(a, target, 0.95f);
-    }), rowGap(a, 7));
+    // TAB 0: APRENDER (Palabra del Dia + Cuadricula 2x2)
+    renderTab[0] = () -> {
+      bodyContainer.removeAllViews();
+      bodyContainer.addView(buildDailyWordCard(a, dismiss), rowGap(a, 10));
 
-    root.addView(buildOptionRow(a, "◎", "Modo Shadowing", "Italiano normal (1.0x), pausa y lento (0.75x)", () -> {
-      dismiss.run();
-      openShadowing(a, selectedText);
-    }), rowGap(a, 7));
+      View tVerbs = buildGridTile(a, "V", "50 Verbos", "Conjugador offline y audio", () -> {
+        dismiss.run(); openVerbConjugator(a);
+      });
+      View tCards = buildGridTile(a, "♡", "Flashcards", "Tu mazo de repaso diario", () -> {
+        dismiss.run(); openFlashcards(a, selectedText);
+      });
+      bodyContainer.addView(buildTwoColRow(a, tVerbs, tCards), rowGap(a, 8));
 
-    root.addView(buildOptionRow(a, "V", "Conjugador de 50 verbos", "Presente, Passato, Imperfetto, Futuro + audio", () -> {
-      dismiss.run();
-      openVerbConjugator(a);
-    }), rowGap(a, 7));
+      View tFalse = buildGridTile(a, "!", "Falsos Amigos", "Trampas ES/IT y quiz", () -> {
+        dismiss.run(); openFalseFriends(a);
+      });
+      View tQuick = buildGridTile(a, "▶", "Frases Rápidas", "Audio natural en 1 toque", () -> {
+        dismiss.run(); openQuickPhrases(a);
+      });
+      bodyContainer.addView(buildTwoColRow(a, tFalse, tQuick), rowGap(a, 4));
+    };
 
-    root.addView(buildOptionRow(a, "!", "Falsos Amigos (ES vs. IT)", "Burro, salire, caldo, subito + mini-quiz", () -> {
-      dismiss.run();
-      openFalseFriends(a);
-    }), rowGap(a, 7));
+    // TAB 1: PRACTICAR (Cuadricula 2x2 + extras)
+    renderTab[1] = () -> {
+      bodyContainer.removeAllViews();
+      View tShad = buildGridTile(a, "◎", "Shadowing", "Normal 1.0x y lento 0.75x", () -> {
+        dismiss.run(); openShadowing(a, selectedText);
+      });
+      View tRole = buildGridTile(a, "❖", "Escenarios", "Bar, hotel, charla y nota", () -> {
+        dismiss.run(); openRoleplay(a);
+      });
+      bodyContainer.addView(buildTwoColRow(a, tShad, tRole), rowGap(a, 8));
 
-    root.addView(buildOptionRow(a, "✦", "Corrector de italiano", "Mejora tu frase con Sofía en italiano", () -> {
-      dismiss.run();
-      correctPhrase(a, selectedText);
-    }), rowGap(a, 7));
+      View tCorr = buildGridTile(a, "✦", "Corrector IA", "Mejora tu frase con Sofía", () -> {
+        dismiss.run(); correctPhrase(a, selectedText);
+      });
+      View tGame = buildGridTile(a, "?", "Mini-Juego", "Reto rápido de agilidad", () -> {
+        dismiss.run(); openMiniGame(a, 0, 0);
+      });
+      bodyContainer.addView(buildTwoColRow(a, tCorr, tGame), rowGap(a, 8));
 
-    root.addView(buildOptionRow(a, "❖", "Escenarios de práctica", "Bar, hotel, charla o examen 1-100", () -> {
-      dismiss.run();
-      openRoleplay(a);
-    }), rowGap(a, 7));
+      View tStory = buildGridTile(a, "≡", "Historias", "Cuento + 3 preguntas", () -> {
+        dismiss.run(); openStoryMode(a);
+      });
+      View tSlang = buildGridTile(a, "»", "Jerga Real", "Modismos e intérprete", () -> {
+        dismiss.run(); openSlang(a);
+      });
+      bodyContainer.addView(buildTwoColRow(a, tStory, tSlang), rowGap(a, 4));
+    };
 
-    root.addView(buildOptionRow(a, "♡", "Flashcards offline", "Guarda frases y repasa con audio", () -> {
-      dismiss.run();
-      openFlashcards(a, selectedText);
-    }), rowGap(a, 7));
+    // TAB 2: AJUSTES (Nivel rapido + Temas + Estilo + Historial + Respaldo)
+    renderTab[2] = () -> {
+      bodyContainer.removeAllViews();
 
-    root.addView(buildOptionRow(a, "⚡", "Frases rápidas en italiano", "Expresiones útiles con audio en 1 toque", () -> {
-      dismiss.run();
-      openQuickPhrases(a);
-    }), rowGap(a, 7));
+      // Selector rapido de nivel (4 botones en linea)
+      TextView lblLvl = new TextView(a);
+      lblLvl.setText("NIVEL DE SOFÍA");
+      lblLvl.setTextColor(muted(a));
+      lblLvl.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+      lblLvl.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+      lblLvl.setPadding(0, 0, 0, a.dp(6));
+      bodyContainer.addView(lblLvl);
 
-    root.addView(buildOptionRow(a, "⇄", "Modo intérprete (ES ↔ IT)", "Traduce y escucha al instante", () -> {
-      dismiss.run();
-      openInterpreter(a, selectedText);
-    }), rowGap(a, 7));
+      LinearLayout lvlRow = new LinearLayout(a);
+      lvlRow.setOrientation(LinearLayout.HORIZONTAL);
+      final String[] lvls = {"A1", "A2", "B1", "B2"};
+      final String[] prompts = {
+        "Ciao Sofia! Parliamo solo in italiano a livello A1 con frasi molto brevi.",
+        "Ciao Sofia! Parliamo solo in italiano a livello A2 con frasi quotidiane.",
+        "Ciao Sofia! Parliamo solo in italiano a livello B1 in modo naturale.",
+        "Ciao Sofia! Parliamo solo in italiano a livello B2 con ritmo naturale."
+      };
+      String curLvl = a.prefs != null ? a.prefs.getString(LEVEL_KEY, "A2") : "A2";
+      for (int i = 0; i < lvls.length; i++) {
+        final int idx = i;
+        boolean active = lvls[i].equals(curLvl);
+        TextView btn = chipBtn(a, lvls[i], active, () -> {
+          a.prefs.edit().putString(LEVEL_KEY, lvls[idx]).apply();
+          a.toast("Nivel: " + lvls[idx]);
+          dismiss.run();
+          a.ask(prompts[idx]);
+        });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
+        if (i < lvls.length - 1) lp.setMarginEnd(a.dp(6));
+        lvlRow.addView(btn, lp);
+      }
+      bodyContainer.addView(lvlRow, rowGap(a, 12));
 
-    root.addView(buildOptionRow(a, "»", "Jerga y modismos reales", "Boh, magari, ci sta, figurati...", () -> {
-      dismiss.run();
-      openSlang(a);
-    }), rowGap(a, 7));
+      // Selector rapido de tema (4 botones en linea)
+      TextView lblTheme = new TextView(a);
+      lblTheme.setText("TEMA VISUAL");
+      lblTheme.setTextColor(muted(a));
+      lblTheme.setTextSize(TypedValue.COMPLEX_UNIT_SP, 10.5f);
+      lblTheme.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+      lblTheme.setPadding(0, 0, 0, a.dp(6));
+      bodyContainer.addView(lblTheme);
 
-    root.addView(buildOptionRow(a, "?", "Mini-juego de agilidad", "Quiz rápido offline de preposiciones", () -> {
-      dismiss.run();
-      openMiniGame(a, 0, 0);
-    }), rowGap(a, 7));
+      LinearLayout thRow = new LinearLayout(a);
+      thRow.setOrientation(LinearLayout.HORIZONTAL);
+      int curTh = a.prefs != null ? a.prefs.getInt(THEME_KEY, 0) : 0;
+      for (int i = 0; i < THEME_NAMES.length; i++) {
+        final int idx = i;
+        TextView btn = chipBtn(a, THEME_NAMES[i], i == curTh, () -> {
+          a.prefs.edit().putInt(THEME_KEY, idx).apply();
+          if (a.chat != null) a.chat.setBackgroundColor(THEMES[idx][0]);
+          a.toast("Tema: " + THEME_NAMES[idx]);
+          dismiss.run();
+          openHub(a, selectedText);
+        });
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
+        if (i < THEME_NAMES.length - 1) lp.setMarginEnd(a.dp(5));
+        thRow.addView(btn, lp);
+      }
+      bodyContainer.addView(thRow, rowGap(a, 12));
 
-    root.addView(buildOptionRow(a, "≡", "Historia interactiva", "Cuento corto en italiano + 3 preguntas", () -> {
-      dismiss.run();
-      openStoryMode(a);
-    }), rowGap(a, 7));
+      String style = a.prefs != null ? a.prefs.getString(STYLE_KEY, "Profesora cercana") : "Profesora cercana";
+      bodyContainer.addView(buildOptionRow(a, "★", "Estilo de Sofía", "Actual: " + style, () -> {
+        dismiss.run(); chooseSofiaStyle(a);
+      }), rowGap(a, 7));
 
-    root.addView(buildOptionRow(a, level, "Nivel de Sofía (" + level + ")", "Ajusta entre A1, A2, B1 y B2", () -> {
-      dismiss.run();
-      chooseLevel(a);
-    }), rowGap(a, 7));
+      bodyContainer.addView(buildOptionRow(a, "⇄", "Intérprete ES ↔ IT", "Traduce y escucha al instante", () -> {
+        dismiss.run(); openInterpreter(a, selectedText);
+      }), rowGap(a, 7));
 
-    root.addView(buildOptionRow(a, "◐", "Tema visual (" + themeName + ")", "Noche Azul, Espresso, Verde Italia, AMOLED", () -> {
-      dismiss.run();
-      chooseTheme(a);
-    }), rowGap(a, 7));
+      bodyContainer.addView(buildOptionRow(a, "≡", "Historial de chats", "Guardar, abrir o borrar sesiones", () -> {
+        dismiss.run(); showHistoryDialog(a);
+      }), rowGap(a, 7));
 
-    root.addView(buildOptionRow(a, "★", "Estilo de Sofía", "Actual: " + style, () -> {
-      dismiss.run();
-      chooseSofiaStyle(a);
-    }), rowGap(a, 7));
+      bodyContainer.addView(buildOptionRow(a, "⇪", "Respaldo JSON", "Exportar o importar tu progreso", () -> {
+        dismiss.run(); openBackupDialog(a);
+      }), rowGap(a, 0));
+    };
 
-    root.addView(buildOptionRow(a, "⇪", "Respaldo de progreso (JSON)", "Exportar o importar flashcards, XP e historial", () -> {
-      dismiss.run();
-      openBackupDialog(a);
-    }), rowGap(a, 0));
+    final Runnable selectTab[] = new Runnable[3];
+    for (int i = 0; i < 3; i++) {
+      final int idx = i;
+      TextView tb = new TextView(a);
+      tb.setText(tabTitles[i]);
+      tb.setGravity(Gravity.CENTER);
+      tb.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12.5f);
+      tb.setTypeface(Typeface.create("sans-serif-medium", Typeface.BOLD));
+      tb.setPadding(a.dp(6), a.dp(8), a.dp(6), a.dp(8));
+      tabBtns[i] = tb;
+      selectTab[i] = () -> {
+        for (int j = 0; j < 3; j++) {
+          boolean on = (j == idx);
+          tabBtns[j].setTextColor(on ? 0xFF0A1422 : muted(a));
+          tabBtns[j].setBackground(on ? roundBg(a, accent(a), 0, 11) : null);
+        }
+        renderTab[idx].run();
+      };
+      tb.setOnClickListener(v -> selectTab[idx].run());
+      tabsBar.addView(tb, new LinearLayout.LayoutParams(0, -2, 1f));
+    }
 
-    scroll.addView(root);
+    outer.addView(tabsBar, rowGap(a, 10));
+    outer.addView(bodyScroll, new LinearLayout.LayoutParams(-1, a.dp(340)));
+
+    selectTab[0].run();
+
     AlertDialog dialog = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
     holder[0] = dialog;
-    styleDialogWindow(a, dialog, scroll);
+    styleDialogWindow(a, dialog, outer);
+  }
+
+  public static void showHistoryDialog(MainActivity a) {
+    try {
+      JSONArray arr = new JSONArray(a.prefs.getString(HIST_KEY, "[]"));
+      ScrollView scroll = new ScrollView(a);
+      LinearLayout root = dialogHeader(a, "HISTORIAL OFFLINE", "Conversaciones guardadas");
+
+      final AlertDialog[] holder = new AlertDialog[1];
+      Runnable dismiss = () -> { if (holder[0] != null && holder[0].isShowing()) holder[0].dismiss(); };
+
+      root.addView(buildOptionRow(a, "+", "Guardar conversación actual",
+        "Guarda todos los mensajes visibles", () -> {
+          dismiss.run();
+          ChatBubbles.saveCurrentChat(a);
+        }), rowGap(a, 7));
+
+      for (int i = arr.length() - 1; i >= 0; i--) {
+        final int idx = i;
+        JSONObject o = arr.getJSONObject(i);
+        int count = o.optJSONArray("msgs") != null ? o.optJSONArray("msgs").length() : 0;
+        root.addView(buildOptionRow(a, "≡", o.optString("title", "Sesión"),
+          count + " mensajes", () -> {
+            dismiss.run();
+            ChatBubbles.openSavedChat(a, idx);
+          }), rowGap(a, 7));
+      }
+
+      scroll.addView(root);
+      AlertDialog dialog = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
+      holder[0] = dialog;
+      styleDialogWindow(a, dialog, scroll);
+    } catch (Exception e) {
+      a.toast("Error abriendo historial");
+    }
   }
 
   private static void openVerbConjugator(MainActivity a) {
@@ -696,7 +956,7 @@ public final class ImparaSuperApp {
     TextView info = new TextView(a);
     info.setText("Sofía dice la frase en italiano normal (1.0x), hace una pausa para que repitas y luego la repite lenta (0.75x).");
     info.setTextColor(muted(a));
-    info.setTextSize(12.5f);
+    info.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f);
     info.setPadding(0, 0, 0, a.dp(8));
     root.addView(info);
 
@@ -721,17 +981,17 @@ public final class ImparaSuperApp {
           JSONObject out = new JSONObject();
           out.put("v", 1);
           out.put("cards", a.prefs.getString(CARDS_KEY, "[]"));
-          out.put("history", a.prefs.getString("impara_chat_history_v1", "[]"));
+          out.put("history", a.prefs.getString(HIST_KEY, "[]"));
           out.put("xp", a.prefs.getInt(XP_KEY, 0));
           out.put("streak", a.prefs.getInt(STREAK_KEY, 1));
           out.put("last_day", a.prefs.getString(LAST_DAY_KEY, ""));
           out.put("level", a.prefs.getString(LEVEL_KEY, "A2"));
           out.put("theme", a.prefs.getInt(THEME_KEY, 0));
-          out.put("style", a.prefs.getString(STYLE_KEY, "Profesora italiana"));
+          out.put("style", a.prefs.getString(STYLE_KEY, "Profesora cercana"));
           ClipboardManager cm = (ClipboardManager) a.getSystemService(Context.CLIPBOARD_SERVICE);
           if (cm != null) {
             cm.setPrimaryClip(ClipData.newPlainText("ImparaBackup", out.toString()));
-            a.toast("Respaldo copiado. Guárdalo en tus notas.");
+            a.toast("Respaldo copiado al portapapeles");
           }
         } catch (Exception e) {
           a.toast("Error exportando respaldo");
@@ -750,17 +1010,17 @@ public final class ImparaSuperApp {
               JSONObject in = new JSONObject(et.getText().toString().trim());
               a.prefs.edit()
                 .putString(CARDS_KEY, in.optString("cards", "[]"))
-                .putString("impara_chat_history_v1", in.optString("history", "[]"))
+                .putString(HIST_KEY, in.optString("history", "[]"))
                 .putInt(XP_KEY, in.optInt("xp", 0))
                 .putInt(STREAK_KEY, in.optInt("streak", 1))
                 .putString(LAST_DAY_KEY, in.optString("last_day", ""))
                 .putString(LEVEL_KEY, in.optString("level", "A2"))
                 .putInt(THEME_KEY, in.optInt("theme", 0))
-                .putString(STYLE_KEY, in.optString("style", "Profesora italiana"))
+                .putString(STYLE_KEY, in.optString("style", "Profesora cercana"))
                 .apply();
               a.toast("Progreso restaurado con éxito");
             } catch (Exception e) {
-              a.toast("JSON inválido. Verifica que lo copiaste completo.");
+              a.toast("JSON inválido");
             }
           })
           .setNegativeButton("Cancelar", null)
@@ -880,66 +1140,6 @@ public final class ImparaSuperApp {
     styleDialogWindow(a, dialog, scroll);
   }
 
-  private static void chooseLevel(MainActivity a) {
-    final String[] lvls = {"A1", "A2", "B1", "B2"};
-    final String[] descs = {
-      "Principiante: frases cortas y claras",
-      "Elemental: conversación cotidiana sencilla",
-      "Intermedio: tiempos pasados y futuro",
-      "Avanzado: italiano fluido y natural"
-    };
-    final String[] prompts = {
-      "Ciao Sofia! Parliamo solo in italiano a livello A1 con frasi molto brevi e chiare.",
-      "Ciao Sofia! Parliamo solo in italiano a livello A2 con frasi semplici di tutti i giorni.",
-      "Ciao Sofia! Parliamo solo in italiano a livello B1 in modo naturale.",
-      "Ciao Sofia! Parliamo solo in italiano a livello B2 con ritmo naturale."
-    };
-
-    ScrollView scroll = new ScrollView(a);
-    LinearLayout root = dialogHeader(a, "SELECTOR DE NIVEL", "Nivel de Sofía");
-    final AlertDialog[] holder = new AlertDialog[1];
-
-    for (int i = 0; i < lvls.length; i++) {
-      final int idx = i;
-      root.addView(buildOptionRow(a, lvls[i], "Nivel " + lvls[i], descs[i], () -> {
-        if (holder[0] != null) holder[0].dismiss();
-        a.prefs.edit().putString(LEVEL_KEY, lvls[idx]).apply();
-        a.toast("Nivel: " + lvls[idx]);
-        a.ask(prompts[idx]);
-      }), rowGap(a, 7));
-    }
-    scroll.addView(root);
-    AlertDialog d = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
-    holder[0] = d;
-    styleDialogWindow(a, d, scroll);
-  }
-
-  private static void chooseTheme(MainActivity a) {
-    final String[] subs = {
-      "Azul profundo nocturno con acento celeste",
-      "Café oscuro elegante con acento dorado",
-      "Verde esmeralda oscuro estilo Italia",
-      "Negro puro AMOLED para ahorrar batería"
-    };
-    ScrollView scroll = new ScrollView(a);
-    LinearLayout root = dialogHeader(a, "APARIENCIA", "Elige un tema visual");
-    final AlertDialog[] holder = new AlertDialog[1];
-
-    for (int i = 0; i < THEME_NAMES.length; i++) {
-      final int idx = i;
-      root.addView(buildOptionRow(a, "◐", THEME_NAMES[i], subs[i], () -> {
-        if (holder[0] != null) holder[0].dismiss();
-        a.prefs.edit().putInt(THEME_KEY, idx).apply();
-        if (a.chat != null) a.chat.setBackgroundColor(THEMES[idx][0]);
-        a.toast("Tema: " + THEME_NAMES[idx]);
-      }), rowGap(a, 7));
-    }
-    scroll.addView(root);
-    AlertDialog d = new AlertDialog.Builder(a).setNegativeButton("Cerrar", null).create();
-    holder[0] = d;
-    styleDialogWindow(a, d, scroll);
-  }
-
   private static void correctPhrase(MainActivity a, String initial) {
     LinearLayout box = dialogHeader(a, "CORRECTOR CON SOFÍA", "Mejorar frase en italiano");
     EditText input = styledInput(a, "Scrivi una frase in italiano...", initial);
@@ -1008,7 +1208,7 @@ public final class ImparaSuperApp {
           TextView tv = new TextView(a);
           tv.setText(phrase);
           tv.setTextColor(INK);
-          tv.setTextSize(16);
+          tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16f);
           box.addView(tv);
           AlertDialog d2 = new AlertDialog.Builder(a)
             .setPositiveButton("▶ Normal", (x, y) -> speakItalianOnly(a, phrase, 1.0f))
