@@ -139,7 +139,7 @@ public final class ChatBubbles {
       detach(text);
       text.setTag(0x7e002601, true);
       text.setTextColor(a.prefs.getInt("chat_text_color", INK));
-      text.setTextSize(TypedValue.COMPLEX_UNIT_SP, a.prefs.getInt("chat_text_size", 15.5f));
+      text.setTextSize(TypedValue.COMPLEX_UNIT_SP, a.prefs.getInt("chat_text_size", 16));
       text.setIncludeFontPadding(false);
       text.setPadding(0, 0, 0, 0);
       text.setLineSpacing(a.dp(3), 1f);
@@ -331,7 +331,7 @@ public final class ChatBubbles {
     ImparaSuperApp.styleDialogWindow(a, b.create(), box);
   }
 
-  static void saveCurrentChat(MainActivity a) {
+  public static void saveCurrentChat(MainActivity a) {
     if (a.chat == null || a.chat.getChildCount() == 0) {
       a.toast("No hay mensajes para guardar");
       return;
@@ -367,7 +367,7 @@ public final class ChatBubbles {
     }
   }
 
-  static void openSavedChat(MainActivity a, int idx) {
+  public static void openSavedChat(MainActivity a, int idx) {
     try {
       JSONArray arr = new JSONArray(a.prefs.getString(HIST_KEY, "[]"));
       JSONObject session = arr.getJSONObject(idx);
