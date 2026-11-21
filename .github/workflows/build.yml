@@ -21,23 +21,14 @@ jobs:
           s = p.read_text(encoding="utf-8")
           s = s.replace("new LinearLayout.LayoutParams(-1,a.dp(ChatSpace.AVATAR))", "new LinearLayout.LayoutParams(-1,a.dp(240))")
           old_add = "hero.addView(a.portrait,new FrameLayout.LayoutParams(-1,-1));"
-          new_add = old_add + "if(a.portrait instanceof ViewGroup){ViewGroup pg=(ViewGroup)a.portrait;for(int k=0;k<pg.getChildCount();k++){View ch=pg.getChildAt(k);ch.setBackgroundColor(Color.TRANSPARENT);if(ch instanceof ImageView)ch.setVisibility(View.GONE);}}"
+          new_add = (
+              old_add
+              + "if(a.portrait instanceof ViewGroup){ViewGroup pg=(ViewGroup)a.portrait;for(int k=0;k<pg.getChildCount();k++){View ch=pg.getChildAt(k);ch.setBackgroundColor(Color.TRANSPARENT);if(ch instanceof ImageView)ch.setVisibility(View.GONE);}}"
+              + "FrameLayout.LayoutParams lgp=new FrameLayout.LayoutParams(-2,-2,android.view.Gravity.TOP|android.view.Gravity.START);"
+              + "hero.addView(LiveGemma.buildFloatingBar(a),lgp);"
+          )
           s = s.replace(old_add, new_add)
           p.write_text(s, encoding="utf-8")
-          EOF
-      - name: Inspeccionar voz y Gemma
-        run: |
-          python3 - << 'EOF'
-          from pathlib import Path
-          import re
-          src = Path("build551/src/com/germansilva/italianomaestro")
-          for f in sorted(src.glob("*.java")):
-              txt = f.read_text(encoding="utf-8", errors="ignore")
-              hits = re.findall(r"(?:void|String|boolean)\s+[a-zA-Z0-9_]*(?:mic|Mic|voice|Voice|speak|Speak|tts|Tts|send|Send|ask|Ask|gemma|Gemma|listen|Listen|audio|Audio|prompt|Prompt)[a-zA-Z0-9_]*\s*\([^)]*\)", txt)
-              if hits:
-                  print(f"=== {f.name} ===")
-                  for h in hits[:20]:
-                      print(" ", h)
           EOF
       - name: Descargar APK base y llave fija
         env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
@@ -138,7 +129,7 @@ jobs:
                       <path d="M31,64 C29,72 31,82 35,86" stroke="rgba(255,255,255,0.45)" stroke-width="2" stroke-linecap="round" fill="none"/>
                     </g>
                   </svg>
-                  <button id="bgBtn" type="button" style="position:absolute;top:8px;right:8px;z-index:99;background:rgba(12,32,37,.78);color:#f3f1e8;border:1px solid rgba(255,255,255,.28);border-radius:12px;padding:5px 10px;font-size:11px;pointer-events:auto">🖼 Biblioteca</button>
+                  <button id="bgBtn" type="button" style="position:absolute;top:8px;right:8px;z-index:99;background:rgba(12,32,37,.78);color:#f3f1e8;border:1px solid rgba(56,189,248,.45);border-radius:16px;padding:5px 11px;font-size:11px;pointer-events:auto">🖼 Biblioteca</button>
                   <script>(()=>{const st=document.getElementById('sofiaStage'),btn=document.getElementById('bgBtn');
                   const bgs=[
                   {n:'Biblioteca',css:'linear-gradient(160deg, #3b2618 0%, #1f140d 65%, #120b07 100%)'},
